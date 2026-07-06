@@ -1,0 +1,19 @@
+seed: 42
+
+dataset:
+  name: SetFit/toxic_conversations
+  text_column: text
+  label_column: label
+
+paths:
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed
+  teacher_labels_dir: data/teacher_labels
+  results_dir: results
+
+subsets:
+  train_size: 1000
+  validation_size: 200
+  test_size: 200
+  sampling_strategy: stratified
+  positive_label_ratio: 0.3
