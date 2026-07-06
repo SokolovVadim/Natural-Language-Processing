@@ -1,6 +1,7 @@
 # Progress log
 
-1. Load dataset
+
+## 1. Load dataset
 
 First got this
 
@@ -61,3 +62,29 @@ validation label distribution:
 test label distribution:
   label=0: 140 (70.00%)
   label=1: 60 (30.00%)
+
+### 2. Training baseline
+
+Training TF-IDF + Logistic Regression baseline...
+  train rows: 1000
+  validation rows: 200
+  test rows: 200
+
+Validation metrics:
+  accuracy:  0.7350
+  precision: 0.5854
+  recall:    0.4000
+  f1:        0.4752
+  confusion_matrix: [[123, 17], [36, 24]]
+
+Test metrics:
+  accuracy:  0.6850
+  precision: 0.4694
+  recall:    0.3833
+  f1:        0.4220
+  confusion_matrix: [[114, 26], [37, 23]]
+
+Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/tfidf_baseline_metrics.json
+Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/tfidf_baseline_predictions.csv
+
+And we can see that it's not strong at all
