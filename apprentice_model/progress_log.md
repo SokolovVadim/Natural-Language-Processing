@@ -88,3 +88,50 @@ Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model
 Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/tfidf_baseline_predictions.csv
 
 And we can see that it's not strong at all
+
+So i tried to rerun it with larger, therefore more balanced split
+
+
+
+Prepared split sizes:
+  train: 5000 rows
+
+train label distribution:
+  label=0: 3500 (70.00%)
+  label=1: 1500 (30.00%)
+  validation: 1000 rows
+
+validation label distribution:
+  label=0: 700 (70.00%)
+  label=1: 300 (30.00%)
+  test: 1000 rows
+
+test label distribution:
+  label=0: 700 (70.00%)
+  label=1: 300 (30.00%)
+
+
+and got
+
+
+Training TF-IDF + Logistic Regression baseline...
+  train rows: 5000
+  validation rows: 1000
+  test rows: 1000
+
+Validation metrics:
+  accuracy:  0.7610
+  precision: 0.5916
+  recall:    0.6567
+  f1:        0.6224
+  confusion_matrix: [[564, 136], [103, 197]]
+
+Test metrics:
+  accuracy:  0.7780
+  precision: 0.6327
+  recall:    0.6200
+  f1:        0.6263
+  confusion_matrix: [[592, 108], [114, 186]]
+
+
+ALso decided to save the model in joblib format

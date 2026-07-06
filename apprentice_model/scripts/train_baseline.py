@@ -108,10 +108,14 @@ def main() -> None:
     predictions_path = results_dir / "tfidf_baseline_predictions.csv"
     predictions_df.to_csv(predictions_path, index=False)
 
+    model_path = results_dir / "tfidf_baseline.joblib"
+    model.save(str(model_path))
+
     print_metric_summary("Validation", validation_metrics)
     print_metric_summary("Test", test_metrics)
     print(f"\nSaved metrics to {metrics_path}")
     print(f"Saved test predictions to {predictions_path}")
+    print(f"Saved model to {model_path}")
 
 
 if __name__ == "__main__":
