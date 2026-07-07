@@ -290,4 +290,117 @@ Summary for test:
     test:311:1f25df3e9046ce2d: original=0 teacher=1 text="More yapping from someone who knows nothing about the big picture. Can't see the forest for the trees can you?"
     test:537:78b8d314a7b6857a: original=0 teacher=1 text='A few years ago, I was told that an autopsy showed that a close personal friend of mine had died of natural causes and w'
 
-This is okay for a tiny sample
+This is okay for a tiny sample	
+
+
+## 7. Check a larger set
+
+
+python scripts/generate_teacher_labels.py --split train --limit 100
+
+Labeling train: target=100
+Selected original label distribution:
+  label=0: 70
+  label=1: 30
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [12:38<00:00,  7.58s/it]
+
+Summary for train:
+  labeled examples: 100
+  teacher label distribution:
+    label=0: 51
+    label=1: 49
+  agreement with original labels: 75.00%
+  disagreements: 25
+    train:3183:9152f85808ba4792: original=0 teacher=1 text='You keep talking about "you people," and you talk about Scalia calling for the end of "The Rule of Law" in America. Ther'
+    train:4584:a283fef386f61485: original=0 teacher=1 text='Again the globe and mail goes over the top with its vile race baiting hate propaganda.'
+    train:2327:b4612b3729c149f8: original=0 teacher=1 text='Are you serious? You give recognition to whom and for what? If it is meant to be, so be it. It is part of life - grow up'
+    train:1470:51f2ddb18611d49b: original=1 teacher=0 text="He woulda got away with it to if it wasn'the for those darn pesky kids and that dog."
+    train:2384:a657dc22c14427ef: original=0 teacher=1 text='From the article. "The government must therefore also encourage people to refrain from using legal pot until they are 25'
+
+python scripts/generate_teacher_labels.py --split validation --limit 50
+
+Labeling validation: target=50
+Selected original label distribution:
+  label=0: 35
+  label=1: 15
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 50/50 [04:36<00:00,  5.52s/it]
+
+Summary for validation:
+  labeled examples: 50
+  teacher label distribution:
+    label=0: 27
+    label=1: 23
+  agreement with original labels: 80.00%
+  disagreements: 10
+    validation:152:0cf43bdc4ee9ed7f: original=1 teacher=0 text='Someone in LA is prejudice against Asians? Why? look too much like Mexicans? Actually she should be made to write a pape'
+    validation:311:8bc6791edddaec65: original=0 teacher=1 text="Time Bandit you don't have a clue what drives a thriving economy its not REDISTRIBUTION OF WEALTH in this United States."
+    validation:847:96b1d08ed35bfd61: original=0 teacher=1 text='I\'m actually enjoying the usual string of "sour grapes!" comments from those who have never managed to get a job in jour'
+    validation:695:4bf996aefaa559b3: original=0 teacher=1 text='Congrats alt-right neonazi sympathizer. You scored a "most disagreed with" commenter status.'
+    validation:593:2d238397ffd16d62: original=0 teacher=1 text='As is the case with Islam when they call for the death of America, why is it so hard to understand when North Korea asks'
+
+ python scripts/generate_teacher_labels.py --split test --limit 50
+
+Labeling test: target=50
+Selected original label distribution:
+  label=0: 35
+  label=1: 15
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 50/50 [05:04<00:00,  6.09s/it]
+
+Summary for test:
+  labeled examples: 50
+  teacher label distribution:
+    label=0: 25
+    label=1: 25
+  agreement with original labels: 80.00%
+  disagreements: 10
+    test:951:ccfc6c5282949ffa: original=0 teacher=1 text='Are you sitting down? In his latest "Love Me" rally, Trump said the following: “With the exception of the late, great Ab'
+    test:972:5db1b876bd1b5f6c: original=0 teacher=1 text='Canadians have called for and will support action on climate change. The carbon tax is entirely within federal jurisdict'
+    test:311:1f25df3e9046ce2d: original=0 teacher=1 text="More yapping from someone who knows nothing about the big picture. Can't see the forest for the trees can you?"
+    test:537:78b8d314a7b6857a: original=0 teacher=1 text='A few years ago, I was told that an autopsy showed that a close personal friend of mine had died of natural causes and w'
+    test:847:afe63df65849a9a9: original=0 teacher=1 text='I think the public deserves to know what the original tax bill was. In other words, how many PFD checks worth in tax lia'
+
+ train
+Rows: 100
+Original:
+original_label
+0    70
+1    30
+Name: count, dtype: int64
+Teacher:
+teacher_label
+0    51
+1    49
+Name: count, dtype: int64
+Agreement: 0.75
+
+ validation
+Rows: 50
+Original:
+original_label
+0    35
+1    15
+Name: count, dtype: int64
+Teacher:
+teacher_label
+0    27
+1    23
+Name: count, dtype: int64
+Agreement: 0.8
+
+ test
+Rows: 50
+Original:
+original_label
+0    35
+1    15
+Name: count, dtype: int64
+Teacher:
+teacher_label
+1    25
+0    25
+Name: count, dtype: int64
+Agreement: 0.8
+
+Original labels are 70/30, but teacher labels are closer to 50/50:
+
+This means the OpenAI teacher often marks comments as toxic even when the dataset says it's not.
