@@ -25,3 +25,11 @@ student_baseline:
   learning_rate: 0.00002
   epochs: 3
   num_labels: 2
+
+benchmark:
+  num_repeats: 5
+  batch_size: 32
+  max_length: 128
+  test_path: data/processed/test.csv
+  output_json: results/benchmark_results.json
+  output_csv: results/benchmark_results.csv
