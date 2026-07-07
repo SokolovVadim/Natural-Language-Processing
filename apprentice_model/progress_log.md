@@ -189,10 +189,9 @@ SO we can see that TF-IDF is more efifcient than BERT
 
 I added the open AI teacher via tocken
 
-And tried to authorize then got a problem with the billing, fixed and ran the training. 
+And tried to authorize then got a problem with the billing, fixed and ran the training.
 
 Example:
-
 
 python scripts/generate_teacher_labels.py --split train --limit 1
 
@@ -208,7 +207,6 @@ Summary for train:
   agreement with original labels: 0.00%
   disagreements: 1
     train:0:1c458b809a26aa60: original=1 teacher=0 text='Damnit!, I was going to Pearson airport Thursday morning to have my bag handled. Well that sucks!!........Hmmmm, maybe.'
-
 
 Then identified a problem that the teacher labeling currently selects the first N rows instead of a stratified sample
 
@@ -240,7 +238,6 @@ Summary for train:
 
 ### Validate
 
-
 python scripts/generate_teacher_labels.py --split validation --limit 10
 
 Labeling validation: target=10
@@ -264,7 +261,6 @@ Summary for validation:
     validation:311:8bc6791edddaec65: original=0 teacher=1 text="Time Bandit you don't have a clue what drives a thriving economy its not REDISTRIBUTION OF WEALTH in this United States."
 
 ### Test
-
 
 python scripts/generate_teacher_labels.py --split test --limit 10
 
@@ -290,11 +286,9 @@ Summary for test:
     test:311:1f25df3e9046ce2d: original=0 teacher=1 text="More yapping from someone who knows nothing about the big picture. Can't see the forest for the trees can you?"
     test:537:78b8d314a7b6857a: original=0 teacher=1 text='A few years ago, I was told that an autopsy showed that a close personal friend of mine had died of natural causes and w'
 
-This is okay for a tiny sample	
-
+This is okay for a tiny sample
 
 ## 7. Check a larger set
-
 
 python scripts/generate_teacher_labels.py --split train --limit 100
 
@@ -404,3 +398,59 @@ Agreement: 0.8
 Original labels are 70/30, but teacher labels are closer to 50/50:
 
 This means the OpenAI teacher often marks comments as toxic even when the dataset says it's not.
+
+
+Then i did evaluation for 500 examples
+
+## 8. Train distilled student
+
+
+python scripts/train_distilled_student.py
+
+Training hard-label distilled BERT-tiny student...
+  model: prajjwal1/bert-tiny
+  train rows: 594
+  validation rows: 148
+  test rows: 148
+  target column: teacher_label
+  epochs: 5
+  device: cpu
+
+...
+
+
+Distilled student results:
+
+Validation against teacher:
+  accuracy:  0.5405
+  precision: 0.4667
+  recall:    0.2121
+  f1:        0.2917
+
+Test against teacher:
+  accuracy:  0.5608
+  precision: 0.5217
+  recall:    0.1818
+  f1:        0.2697
+
+Test against original labels:
+  accuracy:  0.6959
+  precision: 0.4783
+  recall:    0.2500
+  f1:        0.3284
+
+Test label distribution comparison:
+Original labels:
+  label=0: 104
+  label=1: 44
+Teacher labels:
+  label=0: 82
+  label=1: 66
+Predicted labels:
+  label=0: 125
+  label=1: 23
+
+Saved best distilled model to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled
+Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_metrics.json
+Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_predictions.csv
+Saved training history to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_training_history.csv
