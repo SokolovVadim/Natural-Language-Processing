@@ -1,0 +1,40 @@
+% Report for the NLP course project P6 The Apprentice Model
+% Based on the Springer Nature article template
+
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{url}
+\usepackage{listings}
+
+
+\raggedbottom
+
+\begin{document}
+
+\title[The Apprentice Model for Toxicity Detection]{Distilling an LLM Teacher into a Compact Transformer for Toxic Comment Classification}
+
+\author{\fnm{Vadim} \sur{Sokolov}}
+
+\affil{\orgdiv{Master's Degree in Computer Science}, \orgname{Universit\`a degli Studi di Milano}, \orgaddress{\city{Milan}, \country{Italy}}}
+
+\abstract{This project studies knowledge distillation for Natural Language Processing through an ``apprentice model''. 
+The goal is not to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
+The selected task is toxic comment classification. 
+The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT tiny student model, that was trained on original dataset labels, and an LLM OpenAI teacher used to relabel a controlled subset of examples. 
+The results show that the supervised BERT-tiny student improves over the TF-IDF baseline in accuracy and F1 score, but is larger and slower at inference time. 
+The teacher-label analysis also shows meaningful disagreements between dataset labels and the LLM teacher. It shows that the teacher is utilizing a stricter decision boundary for hostile or demeaning language.
+}
+
+\keywords{Natural Language Processing, Knowledge Distillation, Toxicity Detection, BERT, TF-IDF, Large Language Models, GPT}
+
+\maketitle
+
+\section{Introduction}\label{sec:introduction}
+
+
+\end{document}
