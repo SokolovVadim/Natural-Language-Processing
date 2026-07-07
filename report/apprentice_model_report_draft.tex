@@ -36,5 +36,24 @@ The teacher-label analysis also shows meaningful disagreements between dataset l
 
 \section{Introduction}\label{sec:introduction}
 
+Large language models have demonstrated strong performance across many Natural Language Processing tasks, including classification, question answering, summarisation, and reasoning.
+However, their size and computational cost make them difficult to utilize in constrained environments, especially when the target application requires limited resources.
+Knowledge distillation resolves this problem by transferring knowledge from a larger teacher model to a smaller student model \cite{hinton2015distilling}.
+Instead of trying to reproduce the full generality of the teacher, the student can be trained to imitate the teacher's behaviour on a specific task or domain.
+
+This project explores this idea in the context of toxic comment classification. Toxicity detection is a relevant NLP task because it combines text classification, contextual language understanding, and ethical considerations related to bias, moderation, and disagreement.
+The task is also appropriate for studying the tradeoff between model performance and efficiency. A large LLM may provide high quality judgments but it's expensive to use.
+When a compact model can be executed locally and quickly.
+
+The project investigates if a compact Transformer model can be used as a lightweight student of a larger teacher model.
+The selected student is BERT-tiny, a small Transformer encoder.
+The teacher labelling stage uses an OpenAI LLM to classify examples and provide confidence scores.
+In addition, a classical TF-IDF and Logistic Regression model is used as a baseline, connecting the project to traditional vector space methods covered in the course.
+
+The relevant literature includes the original formulation of knowledge distillation by Hinton et al. \cite{hinton2015distilling}, where a student model learns from softened teacher output distributions and Transformer based language models such as BERT \cite{devlin2019bert}.
+TinyBERT \cite{jiao2020tinybert} and DistilBERT \cite{sanh2019distilbert} demonstrate that smaller Transformer models can preserve part of the performance of larger models, reducing computational cost. 
+This project applies the same general motivation to a practical toxicity detection pipeline and evaluates the resulting trade offs in task performance, model size, and inference speed.
+
+
 
 \end{document}
