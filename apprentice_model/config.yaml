@@ -33,3 +33,18 @@ benchmark:
   test_path: data/processed/test.csv
   output_json: results/benchmark_results.json
   output_csv: results/benchmark_results.csv
+
+teacher:
+  provider: openai
+  model: gpt-5-nano
+  max_examples_train: 500
+  max_examples_validation: 100
+  max_examples_test: 100
+  sampling_strategy: stratified
+  positive_label_ratio: 0.3
+  seed: 12345
+  output_dir: data/teacher_labels
+  temperature: 0
+  request_timeout_sec: 60
+  max_retries: 3
+  sleep_between_requests_sec: 0.2
