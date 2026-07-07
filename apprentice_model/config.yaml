@@ -12,8 +12,8 @@ paths:
   results_dir: results
 
 subsets:
-  train_size: 1000
-  validation_size: 200
-  test_size: 200
+  train_size: 5000
+  validation_size: 1000
+  test_size: 1000
   sampling_strategy: stratified
   positive_label_ratio: 0.3
