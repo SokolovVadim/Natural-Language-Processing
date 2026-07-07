@@ -6,3 +6,5 @@ pyyaml
 tqdm
 torch
 transformers
+openai
+python-dotenv
