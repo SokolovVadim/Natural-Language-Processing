@@ -17,3 +17,11 @@ subsets:
   test_size: 1000
   sampling_strategy: stratified
   positive_label_ratio: 0.3
+
+student_baseline:
+  model_name: prajjwal1/bert-tiny
+  max_length: 128
+  batch_size: 16
+  learning_rate: 0.00002
+  epochs: 3
+  num_labels: 2
