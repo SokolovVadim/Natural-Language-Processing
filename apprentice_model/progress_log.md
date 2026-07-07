@@ -127,7 +127,6 @@ Test metrics:
 
 ALso decided to save the model in joblib format
 
-
 ## 3. Train small BERT model
 
 installed prajjwal1/bert-tiny
@@ -152,8 +151,41 @@ Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model
 Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_baseline_predictions.csv
 Saved student baseline model to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_baseline
 
-The accuracy is better than TF-IDF but 
+The accuracy is better than TF-IDF but
 
 Recall is slightly lower
 
 <pre class="overflow-visible! px-0!" data-start="1406" data-end="1432"><div class="relative w-full mt-4 mb-1"><div class=""><div class="contents"><div class="relative"><div class="h-full min-h-0 min-w-0"><div class="h-full min-h-0 min-w-0"><div class="border border-token-border-light border-radius-3xl corner-superellipse/1.1 rounded-3xl"><div class="h-full w-full border-radius-3xl bg-token-bg-elevated-secondary corner-superellipse/1.1 overflow-clip rounded-3xl lxnfua_clipPathFallback"><div class="pointer-events-none absolute end-1.5 top-1 z-2 md:end-2 md:top-1"></div><div class="relative"><div class="pe-11 pt-3"><div class="relative z-0 flex max-w-full"><div id="code-block-viewer" dir="ltr" class="q9tKkq_viewer cm-editor z-10 light:cm-light dark:cm-light flex h-full w-full flex-col items-stretch ͼs ͼ16"><div class="cm-scroller"><pre class="cm-content q9tKkq_readonly m-0"><code><span>recall: -0.017</span></code></pre></div></div></div></div></div></div></div></div></div></div></div></div></div></pre>
+
+
+## 4. Add benchmarks
+
+
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 8155.09it/s]
+
+Benchmark results:
+
+TF-IDF + Logistic Regression
+  size: 0.89 MB
+  examples: 1000
+  avg total inference time: 0.0563 sec
+  avg time/example: 0.0563 ms
+  examples/sec: 17758.85
+  device: cpu
+
+BERT-tiny Student
+  size: 17.42 MB
+  examples: 1000
+  avg total inference time: 1.6386 sec
+  avg time/example: 1.6386 ms
+  examples/sec: 610.29
+  device: cpu
+  batch size: 32
+
+Saved benchmark JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/benchmark_results.json
+Saved benchmark CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/benchmark_results.csv
+
+
+SO we can see that TF-IDF is more efifcient than BERT
+
+## 5.
