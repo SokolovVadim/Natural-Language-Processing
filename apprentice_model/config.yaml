@@ -34,6 +34,11 @@ benchmark:
   output_json: results/benchmark_results.json
   output_csv: results/benchmark_results.csv
 
+teacher_labels_final:
+  train_path: "data/teacher_labels_final/train_teacher.csv"
+  validation_path: "data/teacher_labels_final/validation_teacher.csv"
+  test_path: "data/teacher_labels_final/test_teacher.csv"
+
 teacher:
   provider: openai
   model: gpt-5-nano
@@ -50,6 +55,9 @@ teacher:
   sleep_between_requests_sec: 0.2
 
 distilled_student:
+  teacher_labels_config: teacher_labels_final
+  initialize_from_supervised_student: true
+  supervised_student_path: "results/student_baseline"
   model_name: prajjwal1/bert-tiny
   max_length: 128
   batch_size: 16
