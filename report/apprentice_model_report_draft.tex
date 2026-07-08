@@ -103,6 +103,24 @@ where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ i
 Soft label distillation is considered as future work in this project.
 In this project the implemented experiment focuses on hard label teacher imitation.
 
+\subsection{Pipeline overview}
+
+The project pipeline consists of four stages:
+
+\begin{enumerate}
+    \item \textbf{Data preparation.} The dataset is loaded from Hugging Face and converted into reproducible train, validation, and test CSV splits. 
+    Because the original dataset is quite imbalanced, controlled stratified subsets are created.
+    \item \textbf{Baseline models.} A TF-IDF and Logistic Regression model is trained as a baseline. 
+    A BERT-tiny model is then finetuned on the original labels as a supervised Transformer baseline.
+    \item \textbf{Teacher labelling.} An OpenAI LLM teacher labels a stratified subset of examples and returns a binary label, confidence scores, and a short reason. 
+    This step produces a teacher labelled dataset for distillation.
+    \item \textbf{Distilled student.} Train a distilled BERT-tiny student on teacher labels, initialized from the supervised BERT-tiny run. 
+    Evaluate quality metrics and benchmark model size and inference speed.
+\end{enumerate}
+
+The implementation is organised as a Python package.
+Separate modules are used for data loading, preprocessing, baseline models, Transformer training, teacher prompting, evaluation, and benchmarking. 
+
 
 
 \end{document}
