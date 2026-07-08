@@ -164,6 +164,49 @@ The main classification metrics are accuracy, precision, recall, F1 score, and t
 Because the task is class imbalanced, F1 score is treated as more informative than accuracy measure.
 In addition, model compactness and computational cost are evaluated using model size on disk, average inference time per example, and examples processed per second on CPU.
 
+\subsection{Baselines and supervised student}
+
+The first baseline is a classical TF-IDF and Logistic Regression classifier.
+It represents the vector space and linear classification part of the NLP course.
+The second model is a supervised BERT-tiny student based on \texttt{prajjwal1/bert-tiny}.
+It's trained on the original dataset labels.
+Table~\ref{tab:original-baselines} shows the test results on the 1000 example of the original label test split.
+
+\begin{table}[h]
+\caption{Performance on the original label 1000 example test split.}\label{tab:original-baselines}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Model & Accuracy & Precision & Recall & F1 \\
+\midrule
+TF-IDF + Logistic Regression & 0.7780 & 0.6327 & 0.6200 & 0.6263 \\
+BERT-tiny supervised student & 0.8120 & 0.7240 & 0.6033 & 0.6582 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The supervised BERT-tiny student improves over the TF-IDF baseline in test accuracy and F1 score.
+The improvement is mostly due to higher precision.
+BERT-tiny produces fewer false positives than the TF-IDF model.
+However, its recall is slightly lower, which means that it is more conservative in predicting toxicity and misses slightly more toxic examples.
+This result motivates to use the compact Transformer models. And the TF-IDF baseline is still much smaller and faster.
+
+The test confusion matrix for the TF-IDF baseline is
+\begin{equation}
+\begin{bmatrix}
+592 & 108 \\
+114 & 186
+\end{bmatrix},
+\end{equation}
+while the BERT-tiny supervised student obtains
+\begin{equation}
+\begin{bmatrix}
+631 & 69 \\
+119 & 181
+\end{bmatrix}.
+\end{equation}
+These matrices show that BERT-tiny reduces false positives from 108 to 69, but slightly increases false negatives from 114 to 119.
+
 
 
 \end{document}
