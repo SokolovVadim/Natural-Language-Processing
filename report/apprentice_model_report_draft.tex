@@ -337,6 +337,38 @@ The OpenAI teacher is useful for producing high-level labels, confidence scores,
 But it is costly and slow to query repeatedly.
 The distilled student does not reproduce the full capabilities of the LLM, but it provides a compact local approximation of the teacher's behaviour on the selected toxicity classification task.
 
+\section{Concluding Remarks}\label{sec:conclusion}
+
+In this project a complete apprentice model pipeline was implemented and evaluated for toxic comment classification.
+The results show that a compact BERT-tiny student can be adapted to imitate an LLM teacher on a narrow NLP task.
+The final distilled model achieved an F1 score of 0.6962 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
+At the same time, the distilled model did not improve performance against the original dataset labels compared with the supervised BERT-tiny baseline.
+Because the teacher applies a different and stricter interpretation of toxicity, so optimizing for teacher imitation naturally changes the evaluation behaviour.
+
+The experiments also highlight important tradeoffs.
+The TF-IDF baseline is extremely efficient and interpretable, but weaker in F1 score.
+BERT-tiny provides better classification quality, but is significantly larger and slower.
+The OpenAI teacher, on the other hand, is powerful and can provide labels, confidence scores, and short explanations.
+But it is accessed through a remote API and is expensive and slow to query repeatedly.
+In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.5578 ms per example.
+This illustrates the practical motivation for distillation: expensive teacher decisions can be used offline to train a compact local model that is much faster at deployment time.
+Distillation does not change model size or speed because the architecture remains the same, but it changes the decision boundary of the student.
+This supports the idea that knowledge distillation can be used not only for compression, but also for task specific behavioural adaptation.
+
+There are several limitations.
+First, the project uses hard label distillation, not aclassical soft label distillation with temperature and KL-divergence.
+This loses information contained in the teacher's probability distribution.
+Second, the OpenAI teacher is not an objective ground truth and may be sensitive to prompt wording.
+Third, the final teacher labeled dataset is smaller than the original supervised training set because API labeling has cost and time constraints.
+Finally, the distilled student slightly overpredicts the toxic class compared with the teacher.
+It shows that threshold tuning or soft label training could improve calibration.
+
+Future work could extend the project in several directions.
+The most direct extension is soft label distillation using teacher probabilities and a KL-divergence loss.
+Another extension is threshold calibration on the validation set to better match the teacher's label distribution.
+Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
+Or include explanation based distillation.
+Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
 
 
 \end{document}
