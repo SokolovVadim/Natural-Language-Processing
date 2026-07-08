@@ -189,10 +189,9 @@ SO we can see that TF-IDF is more efifcient than BERT
 
 I added the open AI teacher via tocken
 
-And tried to authorize then got a problem with the billing, fixed and ran the training. 
+And tried to authorize then got a problem with the billing, fixed and ran the training.
 
 Example:
-
 
 python scripts/generate_teacher_labels.py --split train --limit 1
 
@@ -208,7 +207,6 @@ Summary for train:
   agreement with original labels: 0.00%
   disagreements: 1
     train:0:1c458b809a26aa60: original=1 teacher=0 text='Damnit!, I was going to Pearson airport Thursday morning to have my bag handled. Well that sucks!!........Hmmmm, maybe.'
-
 
 Then identified a problem that the teacher labeling currently selects the first N rows instead of a stratified sample
 
@@ -240,7 +238,6 @@ Summary for train:
 
 ### Validate
 
-
 python scripts/generate_teacher_labels.py --split validation --limit 10
 
 Labeling validation: target=10
@@ -264,7 +261,6 @@ Summary for validation:
     validation:311:8bc6791edddaec65: original=0 teacher=1 text="Time Bandit you don't have a clue what drives a thriving economy its not REDISTRIBUTION OF WEALTH in this United States."
 
 ### Test
-
 
 python scripts/generate_teacher_labels.py --split test --limit 10
 
@@ -290,11 +286,9 @@ Summary for test:
     test:311:1f25df3e9046ce2d: original=0 teacher=1 text="More yapping from someone who knows nothing about the big picture. Can't see the forest for the trees can you?"
     test:537:78b8d314a7b6857a: original=0 teacher=1 text='A few years ago, I was told that an autopsy showed that a close personal friend of mine had died of natural causes and w'
 
-This is okay for a tiny sample	
-
+This is okay for a tiny sample
 
 ## 7. Check a larger set
-
 
 python scripts/generate_teacher_labels.py --split train --limit 100
 
@@ -404,3 +398,202 @@ Agreement: 0.8
 Original labels are 70/30, but teacher labels are closer to 50/50:
 
 This means the OpenAI teacher often marks comments as toxic even when the dataset says it's not.
+
+
+Then i did evaluation for 500 examples
+
+## 8. Train distilled student
+
+
+python scripts/train_distilled_student.py
+
+Training hard-label distilled BERT-tiny student...
+  model: prajjwal1/bert-tiny
+  train rows: 594
+  validation rows: 148
+  test rows: 148
+  target column: teacher_label
+  epochs: 5
+  device: cpu
+
+...
+
+
+Distilled student results:
+
+Validation against teacher:
+  accuracy:  0.5405
+  precision: 0.4667
+  recall:    0.2121
+  f1:        0.2917
+
+Test against teacher:
+  accuracy:  0.5608
+  precision: 0.5217
+  recall:    0.1818
+  f1:        0.2697
+
+Test against original labels:
+  accuracy:  0.6959
+  precision: 0.4783
+  recall:    0.2500
+  f1:        0.3284
+
+Test label distribution comparison:
+Original labels:
+  label=0: 104
+  label=1: 44
+Teacher labels:
+  label=0: 82
+  label=1: 66
+Predicted labels:
+  label=0: 125
+  label=1: 23
+
+Saved best distilled model to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled
+Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_metrics.json
+Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_predictions.csv
+Saved training history to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/student_distilled_training_history.csv
+
+So the distilled student is predicting too many non toxic labels and not enough toxic labels.
+
+
+## 9. Train the model with larger size of examples
+
+
+python scripts/generate_teacher_labels.py --split train --limit 1500                                                                                 ✔  1115  00:13:30
+
+Labeling train: target=1500
+Selected original label distribution:
+  label=0: 1050
+  label=1: 450
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1500/1500 [2:14:44<00:00,  5.39s/it]
+
+Summary for train:
+  labeled examples: 1500
+  teacher label distribution:
+    label=0: 815
+    label=1: 685
+  agreement with original labels: 76.33%
+  disagreements: 355
+    train:4911:0c280001fa864152: original=0 teacher=1 text='Hmmm and you do recall a few years back all the caribou slaughtered by the natives... ?? And nothing happened to
+them. W'
+    train:3870:cbcccf5827cd7b0b: original=0 teacher=1 text='Wells Fargo is not an Alaskan Bank. Their loans have to be approved by out of state persons. Wells Fargo sucks. I
+ banked'
+    train:4342:34dca4e2e37a0775: original=0 teacher=1 text="Sarcasm, right? If so, good one, Last Truthbender. Things are so weird these days that I can't be sure anymore. B
+enefit "
+    train:2394:0e629935ca21ffd5: original=0 teacher=1 text='Why bother? I mean they are good at being hypocritical, but why even bother, we all know it is a charade.'
+    train:4547:0cfe1a25bc3a4143: original=0 teacher=1 text='it is clear you either do not know anything about the ideology or you follow it.'
+
+
+
+python scripts/generate_teacher_labels.py --split validation --limit 300                                                                             ✔  1116  07:13:55
+
+Labeling validation: target=300
+Selected original label distribution:
+  label=0: 210
+  label=1: 90
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 300/300 [28:33<00:00,  5.71s/it]
+
+Summary for validation:
+  labeled examples: 300
+  teacher label distribution:
+    label=0: 161
+    label=1: 139
+  agreement with original labels: 77.00%
+  disagreements: 69
+    validation:152:0cf43bdc4ee9ed7f: original=1 teacher=0 text='Someone in LA is prejudice against Asians? Why? look too much like Mexicans? Actually she should be made to w
+rite a pape'
+    validation:368:48b8c0411bcffda0: original=0 teacher=1 text="If their ability to be 'redeemed' justifies their voting, what about all the multiple murderers who are there
+ for life o"
+    validation:479:5aaa3853ed5b0073: original=0 teacher=1 text="It is very sad that even on Holy Thursday all the people here can do is gripe about other people's comments a
+nd gripe ab"
+    validation:918:5533487324ae4a7f: original=0 teacher=1 text='There is no choice remaining but to invade - hopefully with China and Russia as advocates. Anything else just
+ gives the '
+    validation:529:ac8d2f029d058225: original=0 teacher=1 text='She was still a queue-jumper. Legal immigrants had to go through vetting processes, lotteries, etc. to get in
+. I have mo'
+
+
+
+python scripts/generate_teacher_labels.py --split test --limit 300                                                                                   ✔  1117  08:10:48
+
+Labeling test: target=300
+Selected original label distribution:
+  label=0: 210
+  label=1: 90
+  0%|                                                                                                                                               | 0/300 [00:00<?, ?it/s]^
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 300/300 [27:04<00:00,  5.41s/it]
+
+Summary for test:
+  labeled examples: 300
+  teacher label distribution:
+    label=0: 168
+    label=1: 132
+  agreement with original labels: 80.00%
+  disagreements: 60
+    test:956:b1ffd231b44a600f: original=0 teacher=1 text='The reason for removing Bracco and Osborne is their demonstrated contempt for female students and students with cer
+tain '
+    test:147:511f29a032722ee6: original=1 teacher=0 text='"There are no other words....." -------------------------------------- Actually there are: abhorrent, repugnant, re
+pulsi'
+    test:401:8b9b9173b7db159c: original=0 teacher=1 text='Two hours ago I said pls stop with the Hate posts here. People died. Innocent people at the hands of a mass murdere
+r. Bu'
+    test:466:54035532c2a143fb: original=0 teacher=1 text='That is what is wrong with Canada, complacent, non motivated folks willing to settle for mediocrity. Must be a mill
+ennia'
+    test:458:598f8d4b4818b043: original=0 teacher=1 text='Right, because he was black man who became president'
+
+train
+rows: 1571
+original:
+original_label
+0    1100
+1     471
+Name: count, dtype: int64
+teacher:
+teacher_label
+0    850
+1    721
+Name: count, dtype: int64
+agreement: 0.7607
+
+
+validation
+rows: 335
+original:
+original_label
+0    236
+1     99
+Name: count, dtype: int64
+teacher:
+teacher_label
+0    179
+1    156
+Name: count, dtype: int64
+agreement: 0.7701
+
+ test
+rows: 335
+original:
+original_label
+0    236
+1     99
+Name: count, dtype: int64
+teacher:
+teacher_label
+0    185
+1    150
+Name: count, dtype: int64
+agreement: 0.794
+
+
+Before distilled student against teacher was very weak:
+
+<pre class="overflow-visible! px-0!" data-start="166" data-end="187"><div class="relative w-full mt-4 mb-1"><div class=""><div class="contents"><div class="relative"><div class="h-full min-h-0 min-w-0"><div class="h-full min-h-0 min-w-0"><div class="border border-token-border-light border-radius-3xl corner-superellipse/1.1 rounded-3xl"><div class="h-full w-full border-radius-3xl bg-token-bg-elevated-secondary corner-superellipse/1.1 overflow-clip rounded-3xl lxnfua_clipPathFallback"><div class="pointer-events-none absolute end-1.5 top-1 z-2 md:end-2 md:top-1"></div><div class="relative"><div class="pe-11 pt-3"><div class="relative z-0 flex max-w-full"><div id="code-block-viewer" dir="ltr" class="q9tKkq_viewer cm-editor z-10 light:cm-light dark:cm-light flex h-full w-full flex-col items-stretch ͼs ͼ16"><div class="cm-scroller"><pre class="cm-content q9tKkq_readonly m-0"><code><span>F1 ≈ 0.27</span></code></pre></div></div></div></div></div></div></div></div></div></div></div></div></div></pre>
+
+now 
+
+Test against teacher F1 = 0.6962
+
+SO it confirms that the two fixes worked:
+
+1. using larger teacher labeled data
+2. initializing from the supervised BERT-tiny checkpoint
