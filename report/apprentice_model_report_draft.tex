@@ -69,6 +69,24 @@ This question is task specific.
 The goal is not to show that a small model can replace a general purpose LLM in reasoning or conversation. 
 The project studies if the teacher's decision behaviour can be compressed into a smaller model for one domain specific classification problem.
 
+\subsection{Problem definition}
+
+Let $x_i$ be a text comment and let $y_i \in \{0,1\}$ be its original dataset label, where $0$ denotes not toxic and $1$ denotes toxic. 
+The supervised baseline learns a classifier
+\begin{equation}
+    f_{\theta}(x_i) \rightarrow \hat{y}_i,
+\end{equation}
+using the original dataset labels. 
+In the teacher labelling stage, a teacher model $T$ produces a label $\tilde{y}_i$ and confidence scores $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$. 
+The distilled student will then learn to imitate the teacher distribution instead of only relying on the original hard labels.
+
+For a student model $S$, the distillation goal can be written as a combination of supervised classification loss and teacher matching loss:
+\begin{equation}
+    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha T^2\,\mathcal{L}_{KL}(p_T^{(T)}, p_S^{(T)}),
+\end{equation}
+where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $T$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
+The supervised student and teacher labelling components have been implemented and the final distilled training stage uses the generated teacher labels and probabilities.
+
 
 
 \end{document}
