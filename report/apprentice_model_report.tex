@@ -23,12 +23,12 @@
 \affil{\orgdiv{Master's Degree in Computer Science}, \orgname{Universit\`a degli Studi di Milano}, \orgaddress{\city{Milan}, \country{Italy}}}
 
 \abstract{This project studies knowledge distillation for Natural Language Processing through an ``apprentice model''. 
-The goal is not to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
+The goal is to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
 The selected task is toxic comment classification. 
 The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT tiny student model, that was trained on original dataset labels, and an LLM OpenAI teacher used to relabel a controlled subset of examples. 
-The results show that the supervised BERT-tiny student improves over the TF-IDF baseline in accuracy and F1 score, but is larger and slower at inference time. 
-The teacher-label analysis also shows meaningful disagreements between dataset labels and the LLM teacher. It shows that the teacher is utilizing a stricter decision boundary for hostile or demeaning language.
-}
+The supervised BERT-tiny student improves over the TF-IDF baseline in accuracy and F1 score, but is larger and slower at inference time.
+The final distilled student achieves an F1 score of 0.6962 against teacher labels. It shows partial imitation of the teacher's decision boundary.
+The OpenAI teacher is much slower to query in the measured labelling pipeline, while the distilled student provides a compact local approximation for the selected toxicity classification task.}
 
 \keywords{Natural Language Processing, Knowledge Distillation, Toxicity Detection, BERT, TF-IDF, Large Language Models, GPT}
 
@@ -42,8 +42,8 @@ Knowledge distillation resolves this problem by transferring knowledge from a la
 Instead of trying to reproduce the full generality of the teacher, the student can be trained to imitate the teacher's behaviour on a specific task or domain.
 
 This project explores this idea in the context of toxic comment classification. Toxicity detection is a relevant NLP task because it combines text classification, contextual language understanding, and ethical considerations related to bias, moderation, and disagreement.
-The task is also appropriate for studying the tradeoff between model performance and efficiency. A large LLM may provide high quality judgments but it's expensive to use.
-When a compact model can be executed locally and quickly.
+The task is also appropriate for studying the tradeoff between model performance and efficiency. A large LLM may provide high quality judgments but it's slow and expensive to use.
+Meanwhile, a compact model can be executed locally and quickly.
 
 The project investigates if a compact Transformer model can be used as a lightweight student of a larger teacher model.
 The selected student is BERT-tiny, a small Transformer encoder.
@@ -79,7 +79,7 @@ The supervised baseline learns a classifier
 using the original dataset labels. 
 
 
-In the teacher labelling stage, a large language model teacher $T$ produces a new label $\tilde{y}_i \in \{0,1\}$ to a subset of the data and confidence scores $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$. 
+In the teacher labelling stage, a large language model teacher $T$ assigns a new label $\tilde{y}_i \in \{0,1\}$ to each selected example of the data and confidence scores $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$. 
 The resulting teacher labelled dataset is
 \begin{equation}
     \mathcal{D}_T = \{(x_i, \tilde{y}_i)\}_{i=1}^{N}.
@@ -97,9 +97,9 @@ It can be implemented using a temperature scaled Kullback--Leibler divergence lo
 A common formulation is
 
 \begin{equation}
-    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha T^2\,\mathcal{L}_{KL}(p_T^{(T)}, p_S^{(T)}),
+    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha \tau^2\,\mathcal{L}_{KL}(p_T^{(\tau)}, p_S^{(\tau)}),
 \end{equation}
-where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $T$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
+where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $\tau$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
 Soft label distillation is considered as future work in this project.
 In this project the implemented experiment focuses on hard label teacher imitation.
 
@@ -132,23 +132,7 @@ The original distribution is highly imbalanced, with around 8\% toxic examples.
 To avoid wrong accuracy scores and to make the experiments faster and more controlled, stratified subsets were created with a 70 to 30 ratio between not toxic and toxic examples.
 For the main original label experiments, the following processed splits were used: 5000 training examples, 1000 validation examples, and 1000 test examples. 
 For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
-Their distributions are shown in Table~\ref{tab:teacher-splits}.
-
-\begin{table}[h]
-\caption{Final teacher label split statistics.
-Original labels are the dataset annotations.
-Teacher labels are generated by the OpenAI LLM.}\label{tab:teacher-splits}
-\centering
-\begin{tabular}{lrrrrrr}
-\toprule
-Split & Rows & Orig. 0 & Orig. 1 & Teacher 0 & Teacher 1 & Agreement \\
-\midrule
-Train & 1500 & 1050 & 450 & 816 & 684 & 0.7627 \\
-Validation & 300 & 210 & 90 & 160 & 140 & 0.7733 \\
-Test & 300 & 210 & 90 & 167 & 133 & 0.8033 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Their distributions are reported in Table~\ref{tab:teacher-agreement}.
 
 Preprocessing was intentionally minimal.
 Handled empty values, leading and trailing spaces were removed, and repeated spaces were normalised. 
@@ -236,7 +220,7 @@ Two main disagreement patterns were observed:
 \item Original label 1, teacher label 0: comments that contained sensitive, political, or negative terms, but did not necessarily contain direct harassment or abuse under the prompt definition.
 \end{itemize}
 
-The teacher agrees with the original labels on 75\% of the train subset, 80\% of the validation subset, and 80\% of the test subset. 
+The teacher agrees with the original labels on 76.27\% of the train split, 77.33\% of the validation split, and 80.33\% of the test split. 
 The teacher labels a higher proportion of examples as toxic than the original dataset.
 This suggests that the teacher uses a stricter decision boundary for hostile language.
 For example, comments originally labelled as nontoxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
@@ -274,7 +258,9 @@ Test & Original labels & 0.7067 & 0.6480 \\
 
 The distilled student reaches an F1 score of 0.6962 against the teacher on the final test subset.
 This indicates that the compact model partially reaches the teacher's decision boundary.
-Against the original labels, its F1 score is 0.6480, slightly below the supervised BERT-tiny result of 0.6582 from the original label test set.
+Against the original labels on the teacher-labelled test subset, its F1 score is 0.6480.
+This is close to the supervised BERT-tiny result of 0.6582 obtained on the larger 1000-example original-label test split.
+But the two numbers are not perfectly comparable because they are computed on different test subsets.
 This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
 
 The prediction distribution also shows a limitation.
