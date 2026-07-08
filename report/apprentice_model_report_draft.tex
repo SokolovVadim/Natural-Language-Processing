@@ -284,6 +284,58 @@ The distilled model predicts 140 nottoxic and 160 toxic examples.
 Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
 But it slightly overpredicts the toxic class compared with the teacher.
 
+\subsection{Efficiency benchmark}
+
+Efficiency was measured on CPU using the test split.
+The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
+Results are shown in Table~\ref{tab:benchmark}.
+
+\begin{table}[h]
+\caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Model & Size (MB) & Time per example (ms) & Examples per sec \\
+\midrule
+TF-IDF and Logistic Regression & 0.89 & 0.0611 & 16379.73 \\
+BERT-tiny supervised student & 17.42 & 1.6061 & 622.61 \\
+BERT-tiny distilled student & 17.42 & 1.5578 & 641.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The TF-IDF baseline is approximately 19.6 times smaller than the BERT-tiny models and more than 25 times faster on CPU.
+However, its original label F1 score is lower than the supervised BERT-tiny model.
+The supervised and distilled BERT-tiny models have almost identical size and speed.
+It's expected, because they share the same architecture.
+Their difference is the decision boundary learned during training.
+The supervised model follows the original labels, while the distilled model adapts to the teacher labels.
+
+\begin{table}[h]
+\caption{Practical comparison between the OpenAI teacher and the distilled student.}
+\label{tab:teacher-student-efficiency}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Model & Deployment & Time per example & Examples per sec \\
+\midrule
+OpenAI LLM teacher & Remote API & 5440 ms & 0.18 \\
+BERT-tiny distilled student & Local CPU & 1.5578 ms & 641.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The OpenAI teacher is not directly comparable to the local models in terms of model size.
+Because it is accessed through a proprietary remote API and its internal parameters and serving hardware are not observable.
+However, the practical labelling time can be estimated from the teacher labelling runs.
+Labelling 2100 examples took approximately 3.17 hours, corresponding to about 5.44 seconds per example, or 0.18 examples per second.
+In contrast, the distilled BERT-tiny student runs locally on CPU at 1.5578 ms per example, or 641.94 examples per second.
+Therefore, the distilled student is approximately 3500 times faster in the measured deployment setting.
+
+This comparison illustrates the motivation for distillation.
+The OpenAI teacher is useful for producing high-level labels, confidence scores, and short explanations.
+But it is costly and slow to query repeatedly.
+The distilled student does not reproduce the full capabilities of the LLM, but it provides a compact local approximation of the teacher's behaviour on the selected toxicity classification task.
 
 
 
