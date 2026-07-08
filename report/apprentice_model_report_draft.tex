@@ -158,6 +158,12 @@ The original split is fixed at 70\% not toxic and 30\% toxic.
 But the teacher distribution is closer to 55\% not toxic and 45\% toxic. 
 This shows that the teacher applies a stricter toxicity boundary, especially for hostile or aggressive comments originally labeled as not toxic.
 
+\subsection{Evaluation metrics}
+
+The main classification metrics are accuracy, precision, recall, F1 score, and the confusion matrix. 
+Because the task is class imbalanced, F1 score is treated as more informative than accuracy measure.
+In addition, model compactness and computational cost are evaluated using model size on disk, average inference time per example, and examples processed per second on CPU.
+
 
 
 \end{document}
