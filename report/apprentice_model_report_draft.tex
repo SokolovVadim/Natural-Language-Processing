@@ -54,6 +54,21 @@ The relevant literature includes the original formulation of knowledge distillat
 TinyBERT \cite{jiao2020tinybert} and DistilBERT \cite{sanh2019distilbert} demonstrate that smaller Transformer models can preserve part of the performance of larger models, reducing computational cost. 
 This project applies the same general motivation to a practical toxicity detection pipeline and evaluates the resulting trade offs in task performance, model size, and inference speed.
 
+\section{Research question and methodology}\label{sec:methodology}
+
+\subsection{Research question}
+
+The main research question is:
+
+
+To what extent can a compact Transformer model imitate a larger LLM teacher for toxic comment classification.
+What are the trade offs between predictive performance, model size, and inference speed?
+
+
+This question is task specific. 
+The goal is not to show that a small model can replace a general purpose LLM in reasoning or conversation. 
+The project studies if the teacher's decision behaviour can be compressed into a smaller model for one domain specific classification problem.
+
 
 
 \end{document}
