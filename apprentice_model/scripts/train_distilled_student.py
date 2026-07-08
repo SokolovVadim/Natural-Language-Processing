@@ -191,7 +191,7 @@ def main() -> None:
     config = load_config(str(PROJECT_ROOT / "config.yaml"))
     distilled_config = config["distilled_student"]
 
-    seed = int(distilled_config.get("seed", 42))
+    seed = int(distilled_config.get("seed", 12345))
     set_seed(seed)
 
     teacher_split_paths = resolve_teacher_split_paths(config, distilled_config)

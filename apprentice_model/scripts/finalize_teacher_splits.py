@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 INPUT_DIR = PROJECT_ROOT / "data" / "teacher_labels"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "teacher_labels_final"
-SEED = 42
+SEED = 12345
 
 SPLIT_TARGETS = {
     "train": {0: 1050, 1: 450},

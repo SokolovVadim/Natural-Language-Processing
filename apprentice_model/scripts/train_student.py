@@ -78,7 +78,7 @@ def main() -> None:
     """Train the neural student baseline and save metrics, predictions, model."""
     config = load_config(str(PROJECT_ROOT / "config.yaml"))
 
-    seed = int(config.get("seed", 42))
+    seed = int(config.get("seed", 12345))
     set_seed(seed)
 
     dataset_config = config["dataset"]
