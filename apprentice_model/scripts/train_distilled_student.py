@@ -11,6 +11,7 @@ import sys
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -43,6 +44,49 @@ def resolve_device(device_config: str) -> torch.device:
         print("Configured CUDA device is unavailable; falling back to CPU.")
         return torch.device("cpu")
     return device
+
+
+def resolve_teacher_split_paths(config: dict, distilled_config: dict) -> dict[str, Path]:
+    """Resolve teacher-label split paths, defaulting to finalized labels when configured."""
+    labels_config_name = distilled_config.get("teacher_labels_config", "teacher_labels_final")
+    labels_config = config.get(labels_config_name)
+
+    if labels_config:
+        return {
+            "train": PROJECT_ROOT / labels_config["train_path"],
+            "validation": PROJECT_ROOT / labels_config["validation_path"],
+            "test": PROJECT_ROOT / labels_config["test_path"],
+        }
+
+    teacher_dir = PROJECT_ROOT / config["paths"]["teacher_labels_dir"]
+    return {
+        "train": teacher_dir / "train_teacher.csv",
+        "validation": teacher_dir / "validation_teacher.csv",
+        "test": teacher_dir / "test_teacher.csv",
+    }
+
+
+def load_distilled_components(
+    distilled_config: dict,
+    model_name: str,
+    num_labels: int = 2,
+):
+    """Load tokenizer/model either from supervised checkpoint or the base model."""
+    if distilled_config.get("initialize_from_supervised_student", False):
+        checkpoint_path = PROJECT_ROOT / distilled_config["supervised_student_path"]
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Missing supervised student checkpoint: {checkpoint_path}")
+        print(f"  initialization checkpoint: {checkpoint_path}")
+        tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            checkpoint_path,
+            num_labels=num_labels,
+        )
+        return tokenizer, model
+
+    tokenizer = load_student_tokenizer(model_name)
+    model = load_student_model(model_name, num_labels=num_labels)
+    return tokenizer, model
 
 
 def load_teacher_split(
@@ -150,7 +194,7 @@ def main() -> None:
     seed = int(distilled_config.get("seed", 42))
     set_seed(seed)
 
-    teacher_dir = PROJECT_ROOT / config["paths"]["teacher_labels_dir"]
+    teacher_split_paths = resolve_teacher_split_paths(config, distilled_config)
     output_dir = PROJECT_ROOT / distilled_config["output_dir"]
     results_dir = PROJECT_ROOT / config["paths"]["results_dir"]
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -164,21 +208,21 @@ def main() -> None:
     required_columns.update({text_column, teacher_label_column, original_label_column})
 
     train_df = load_teacher_split(
-        teacher_dir / "train_teacher.csv",
+        teacher_split_paths["train"],
         required_columns,
         text_column,
         teacher_label_column,
         original_label_column,
     )
     validation_df = load_teacher_split(
-        teacher_dir / "validation_teacher.csv",
+        teacher_split_paths["validation"],
         required_columns,
         text_column,
         teacher_label_column,
         original_label_column,
     )
     test_df = load_teacher_split(
-        teacher_dir / "test_teacher.csv",
+        teacher_split_paths["test"],
         required_columns,
         text_column,
         teacher_label_column,
@@ -199,11 +243,17 @@ def main() -> None:
     print(f"  validation rows: {len(validation_df)}")
     print(f"  test rows: {len(test_df)}")
     print(f"  target column: {teacher_label_column}")
+    print(f"  train labels: {teacher_split_paths['train']}")
+    print(f"  validation labels: {teacher_split_paths['validation']}")
+    print(f"  test labels: {teacher_split_paths['test']}")
     print(f"  epochs: {num_epochs}")
     print(f"  device: {device}")
 
-    tokenizer = load_student_tokenizer(model_name)
-    model = load_student_model(model_name, num_labels=2)
+    tokenizer, model = load_distilled_components(
+        distilled_config=distilled_config,
+        model_name=model_name,
+        num_labels=2,
+    )
 
     train_dataset = TextClassificationDataset(
         dataframe=train_df,

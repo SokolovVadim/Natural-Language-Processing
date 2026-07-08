@@ -116,9 +116,10 @@ def benchmark_student_model(
     num_repeats: int,
     batch_size: int,
     max_length: int,
+    model_name: str = "bert_tiny_student",
 ) -> dict:
-    """Benchmark the saved BERT-tiny student baseline."""
-    require_existing_path(model_path, "BERT-tiny student model directory")
+    """Benchmark a saved Transformer sequence-classification model."""
+    require_existing_path(model_path, f"{model_name} model directory")
 
     device = get_device()
     tokenizer = AutoTokenizer.from_pretrained(str(model_path))
@@ -144,7 +145,7 @@ def benchmark_student_model(
     )
 
     return {
-        "model_name": "bert_tiny_student",
+        "model_name": model_name,
         "model_path": str(model_path),
         "model_size_mb": get_path_size_mb(str(model_path)),
         "num_examples": len(texts),
@@ -164,6 +165,7 @@ def print_summary(results: list[dict]) -> None:
     display_names = {
         "tfidf_logistic_regression": "TF-IDF + Logistic Regression",
         "bert_tiny_student": "BERT-tiny Student",
+        "bert_tiny_student_distilled": "BERT-tiny Distilled Student",
     }
 
     print("\nBenchmark results:")
@@ -218,6 +220,7 @@ def main() -> None:
 
     tfidf_model_path = results_dir / "tfidf_baseline.joblib"
     student_model_path = results_dir / "student_baseline"
+    distilled_student_model_path = results_dir / "student_distilled"
 
     texts = load_test_texts(test_path, text_column)
 
@@ -233,6 +236,15 @@ def main() -> None:
             num_repeats=num_repeats,
             batch_size=batch_size,
             max_length=max_length,
+            model_name="bert_tiny_student",
+        ),
+        benchmark_student_model(
+            model_path=distilled_student_model_path,
+            texts=texts,
+            num_repeats=num_repeats,
+            batch_size=batch_size,
+            max_length=max_length,
+            model_name="bert_tiny_student_distilled",
         ),
     ]
 
