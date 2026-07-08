@@ -207,6 +207,45 @@ while the BERT-tiny supervised student obtains
 \end{equation}
 These matrices show that BERT-tiny reduces false positives from 108 to 69, but slightly increases false negatives from 114 to 119.
 
+\subsection{Teacher labelling analysis}
+
+An OpenAI LLM teacher was used to label controlled stratified subsets of the data.
+The teacher prompt defined toxicity as insults, harassment, threats, hate, severe disrespect, or abusive language.
+It also stated that comments may be negative, political, or disagreeable without necessarily being toxic.
+The teacher returned a binary label, confidence scores, and a short reason.
+On the final teacher label test split, agreement between original and teacher labels is 0.8033.
+Table~\ref{tab:teacher-agreement} summarises the current teacher labelled subset.
+
+\begin{table}[ht]
+\caption{Agreement between original dataset labels and OpenAI teacher labels on the final teacher-labelled splits.}
+\label{tab:teacher-agreement}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Split & Rows & Original 0 & Original 1 & Teacher 0 & Teacher 1 & Agreement \\
+\midrule
+Train & 1500 & 1050 & 450 & 816 & 684 & 0.7627 \\
+Validation & 300 & 210 & 90 & 160 & 140 & 0.7733 \\
+Test & 300 & 210 & 90 & 167 & 133 & 0.8033 \\
+\botrule
+\end{tabular}
+\end{table}
+
+Two main disagreement patterns were observed:
+\begin{itemize}
+\item Original label 0, teacher label 1: comments that were originally annotated as non-toxic but contained hostile, demeaning, insulting, or identity-related language.
+\item Original label 1, teacher label 0: comments that contained sensitive, political, or negative terms, but did not necessarily contain direct harassment or abuse under the prompt definition.
+\end{itemize}
+
+The teacher agrees with the original labels on 75\% of the train subset, 80\% of the validation subset, and 80\% of the test subset. 
+The teacher labels a higher proportion of examples as toxic than the original dataset.
+This suggests that the teacher uses a stricter decision boundary for hostile language.
+For example, comments originally labelled as nontoxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
+Conversely, some comments originally labelled toxic were considered nontoxic by the teacher when they contained mild profanity or negative language without direct abuse.
+
+This confirms that the LLM teacher should not be treated as a gold standard.
+Instead, it defines a different decision boundary. 
+The distillation task is therefore best interpreted as teacher imitation, not a direct optimization of the original dataset labels.
+
 
 
 \end{document}
