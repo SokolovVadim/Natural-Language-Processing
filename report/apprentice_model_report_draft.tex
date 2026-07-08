@@ -51,7 +51,7 @@ The teacher labelling stage uses an OpenAI LLM to classify examples and provide 
 In addition, a classical TF-IDF and Logistic Regression model is used as a baseline, connecting the project to traditional vector space methods covered in the course.
 
 The relevant literature includes the original formulation of knowledge distillation by Hinton et al. \cite{hinton2015distilling}, where a student model learns from softened teacher output distributions and Transformer based language models such as BERT \cite{devlin2019bert}.
-TinyBERT \cite{jiao2020tinybert} and DistilBERT \cite{sanh2019distilbert} demonstrate that smaller Transformer models can preserve part of the performance of larger models, reducing computational cost. 
+TinyBERT \cite{jiao2020tinybert} demonstrate that smaller Transformer models can preserve part of the performance of larger models, reducing computational cost. 
 This project applies the same general motivation to a practical toxicity detection pipeline and evaluates the resulting trade offs in task performance, model size, and inference speed.
 
 \section{Research question and methodology}\label{sec:methodology}
@@ -370,5 +370,17 @@ Additional work could compare multiple teachers, such as an OpenAI LLM and an op
 Or include explanation based distillation.
 Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
 
+\begin{thebibliography}{9}
+
+\bibitem{hinton2015distilling}
+Hinton, G., Vinyals, O., Dean, J.: Distilling the knowledge in a neural network. arXiv preprint arXiv:1503.02531 (2015)
+
+\bibitem{devlin2019bert}
+Devlin, J., Chang, M.-W., Lee, K., Toutanova, K.: BERT: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of NAACL-HLT, pp. 4171--4186 (2019)
+
+\bibitem{jiao2020tinybert}
+Jiao, X., Yin, Y., Shang, L., Jiang, X., Chen, X., Li, L., Wang, F., Liu, Q.: TinyBERT: Distilling BERT for natural language understanding. In: Findings of the Association for Computational Linguistics: EMNLP 2020, pp. 4163--4174 (2020)
+
+\end{thebibliography}
 
 \end{document}
