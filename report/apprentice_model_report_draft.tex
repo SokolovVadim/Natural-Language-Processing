@@ -246,6 +246,45 @@ This confirms that the LLM teacher should not be treated as a gold standard.
 Instead, it defines a different decision boundary. 
 The distillation task is therefore best interpreted as teacher imitation, not a direct optimization of the original dataset labels.
 
+\subsection{Distilled student results}
+
+The first distillation attempt was trained from the base BERT-tiny model on a smaller teacher labeled set.
+It predicted too few toxic examples and performed poorly. 
+The final approach improved this by using more teacher labeled examples and initializing the distilled model from the supervised BERT-tiny checkpoint. 
+The resulting model was then finetuned on OpenAI teacher labels.
+
+Table~\ref{tab:distilled-results} reports the final distilled student results.
+The model is evaluated in comparison to two cases.
+First, against teacher labels that measures teacher imitation.
+Second, against original labels, that measures compatibility with the original dataset annotations.
+
+\begin{table}[h]
+\caption{Final distilled BERT-tiny results on the teacher labeled validation and test subsets.}\label{tab:distilled-results}
+\centering
+\begin{tabular}{llrr}
+\toprule
+Split & Evaluation target & Accuracy & F1 \\
+\midrule
+Validation & Teacher labels & 0.7433 & 0.7586 \\
+Test & Teacher labels & 0.7033 & 0.6962 \\
+Test & Original labels & 0.7067 & 0.6480 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The distilled student reaches an F1 score of 0.6962 against the teacher on the final test subset.
+This indicates that the compact model partially reaches the teacher's decision boundary.
+Against the original labels, its F1 score is 0.6480, slightly below the supervised BERT-tiny result of 0.6582 from the original label test set.
+This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
+
+The prediction distribution also shows a limitation.
+On the final test subset, the original labels contain 210 nottoxic and 90 toxic examples.
+The teacher labels contain 167 nottoxic and 133 toxic examples.
+The distilled model predicts 140 nottoxic and 160 toxic examples.
+Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
+But it slightly overpredicts the toxic class compared with the teacher.
+
+
 
 
 \end{document}
