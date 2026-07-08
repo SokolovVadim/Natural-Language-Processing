@@ -1,0 +1,386 @@
+% Report for the NLP course project P6 The Apprentice Model
+% Based on the Springer Nature article template
+
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{url}
+\usepackage{listings}
+
+
+\raggedbottom
+
+\begin{document}
+
+\title[The Apprentice Model for Toxicity Detection]{Distilling an LLM Teacher into a Compact Transformer for Toxic Comment Classification}
+
+\author{\fnm{Vadim} \sur{Sokolov}}
+
+\affil{\orgdiv{Master's Degree in Computer Science}, \orgname{Universit\`a degli Studi di Milano}, \orgaddress{\city{Milan}, \country{Italy}}}
+
+\abstract{This project studies knowledge distillation for Natural Language Processing through an ``apprentice model''. 
+The goal is not to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
+The selected task is toxic comment classification. 
+The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT tiny student model, that was trained on original dataset labels, and an LLM OpenAI teacher used to relabel a controlled subset of examples. 
+The results show that the supervised BERT-tiny student improves over the TF-IDF baseline in accuracy and F1 score, but is larger and slower at inference time. 
+The teacher-label analysis also shows meaningful disagreements between dataset labels and the LLM teacher. It shows that the teacher is utilizing a stricter decision boundary for hostile or demeaning language.
+}
+
+\keywords{Natural Language Processing, Knowledge Distillation, Toxicity Detection, BERT, TF-IDF, Large Language Models, GPT}
+
+\maketitle
+
+\section{Introduction}\label{sec:introduction}
+
+Large language models have demonstrated strong performance across many Natural Language Processing tasks, including classification, question answering, summarisation, and reasoning.
+However, their size and computational cost make them difficult to utilize in constrained environments, especially when the target application requires limited resources.
+Knowledge distillation resolves this problem by transferring knowledge from a larger teacher model to a smaller student model \cite{hinton2015distilling}.
+Instead of trying to reproduce the full generality of the teacher, the student can be trained to imitate the teacher's behaviour on a specific task or domain.
+
+This project explores this idea in the context of toxic comment classification. Toxicity detection is a relevant NLP task because it combines text classification, contextual language understanding, and ethical considerations related to bias, moderation, and disagreement.
+The task is also appropriate for studying the tradeoff between model performance and efficiency. A large LLM may provide high quality judgments but it's expensive to use.
+When a compact model can be executed locally and quickly.
+
+The project investigates if a compact Transformer model can be used as a lightweight student of a larger teacher model.
+The selected student is BERT-tiny, a small Transformer encoder.
+The teacher labelling stage uses an OpenAI LLM to classify examples and provide confidence scores.
+In addition, a classical TF-IDF and Logistic Regression model is used as a baseline, connecting the project to traditional vector space methods covered in the course.
+
+The relevant literature includes the original formulation of knowledge distillation by Hinton et al. \cite{hinton2015distilling}, where a student model learns from softened teacher output distributions and Transformer based language models such as BERT \cite{devlin2019bert}.
+TinyBERT \cite{jiao2020tinybert} demonstrate that smaller Transformer models can preserve part of the performance of larger models, reducing computational cost. 
+This project applies the same general motivation to a practical toxicity detection pipeline and evaluates the resulting trade offs in task performance, model size, and inference speed.
+
+\section{Research question and methodology}\label{sec:methodology}
+
+\subsection{Research question}
+
+The main research question is:
+
+
+To what extent can a compact Transformer model imitate a larger LLM teacher for toxic comment classification.
+What are the trade offs between predictive performance, model size, and inference speed?
+
+
+This question is task specific. 
+The goal is not to show that a small model can replace a general purpose LLM in reasoning or conversation. 
+The project studies if the teacher's decision behaviour can be compressed into a smaller model for one domain specific classification problem.
+
+\subsection{Problem definition}
+
+Let $x_i$ be a text comment and let $y_i \in \{0,1\}$ be its original dataset label, where $0$ denotes not toxic and $1$ denotes toxic. 
+The supervised baseline learns a classifier
+\begin{equation}
+    f_{\theta}(x_i) \rightarrow \hat{y}_i,
+\end{equation}
+using the original dataset labels. 
+
+
+In the teacher labelling stage, a large language model teacher $T$ produces a new label $\tilde{y}_i \in \{0,1\}$ to a subset of the data and confidence scores $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$. 
+The resulting teacher labelled dataset is
+\begin{equation}
+    \mathcal{D}_T = \{(x_i, \tilde{y}_i)\}_{i=1}^{N}.
+\end{equation}
+
+The distilled student $S_{\phi}$ is trained to imitate the teacher labels. In this implementation, I use hard-label distillation, where the loss is standard cross-entropy computed against the teacher label:
+\begin{equation}
+    \mathcal{L}_{distill}
+    =
+    \mathcal{L}_{CE}(\tilde{y}_i, p_S(x_i)).
+\end{equation}
+
+This differs from classical soft label distillation, where the student is trained to match the full teacher probability distribution. 
+It can be implemented using a temperature scaled Kullback--Leibler divergence loss.
+A common formulation is
+
+\begin{equation}
+    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha T^2\,\mathcal{L}_{KL}(p_T^{(T)}, p_S^{(T)}),
+\end{equation}
+where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $T$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
+Soft label distillation is considered as future work in this project.
+In this project the implemented experiment focuses on hard label teacher imitation.
+
+\subsection{Pipeline overview}
+
+The project pipeline consists of four stages:
+
+\begin{enumerate}
+    \item \textbf{Data preparation.} The dataset is loaded from Hugging Face and converted into reproducible train, validation, and test CSV splits. 
+    Because the original dataset is quite imbalanced, controlled stratified subsets are created.
+    \item \textbf{Baseline models.} A TF-IDF and Logistic Regression model is trained as a baseline. 
+    A BERT-tiny model is then finetuned on the original labels as a supervised Transformer baseline.
+    \item \textbf{Teacher labelling.} An OpenAI LLM teacher labels a stratified subset of examples and returns a binary label, confidence scores, and a short reason. 
+    This step produces a teacher labelled dataset for distillation.
+    \item \textbf{Distilled student.} Train a distilled BERT-tiny student on teacher labels, initialized from the supervised BERT-tiny run. 
+    Evaluate quality metrics and benchmark model size and inference speed.
+\end{enumerate}
+
+The implementation is organised as a Python package.
+Separate modules are used for data loading, preprocessing, baseline models, Transformer training, teacher prompting, evaluation, and benchmarking. 
+
+\section{Experimental results}\label{sec:results}
+
+\subsection{Dataset and preprocessing}
+
+The experiments use the \texttt{SetFit/toxic\_conversations} dataset from Hugging Face.
+The dataset contains comments labelled as toxic or not toxic and the columns \texttt{text}, \texttt{label}, and \texttt{label\_text}. 
+The full dataset contains more than 1.7 million training examples and 50,000 test examples.
+The original distribution is highly imbalanced, with around 8\% toxic examples. 
+To avoid wrong accuracy scores and to make the experiments faster and more controlled, stratified subsets were created with a 70 to 30 ratio between not toxic and toxic examples.
+For the main original label experiments, the following processed splits were used: 5000 training examples, 1000 validation examples, and 1000 test examples. 
+For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
+Their distributions are shown in Table~\ref{tab:teacher-splits}.
+
+\begin{table}[h]
+\caption{Final teacher label split statistics.
+Original labels are the dataset annotations.
+Teacher labels are generated by the OpenAI LLM.}\label{tab:teacher-splits}
+\centering
+\begin{tabular}{lrrrrrr}
+\toprule
+Split & Rows & Orig. 0 & Orig. 1 & Teacher 0 & Teacher 1 & Agreement \\
+\midrule
+Train & 1500 & 1050 & 450 & 816 & 684 & 0.7627 \\
+Validation & 300 & 210 & 90 & 160 & 140 & 0.7733 \\
+Test & 300 & 210 & 90 & 167 & 133 & 0.8033 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Preprocessing was intentionally minimal.
+Handled empty values, leading and trailing spaces were removed, and repeated spaces were normalised. 
+No lowercasing or punctuation removal was applied, because Transformer tokenizers are designed to process raw text.
+The teacher consistently assigns more examples to the toxic class than the original annotations. 
+The original split is fixed at 70\% not toxic and 30\% toxic.
+But the teacher distribution is closer to 55\% not toxic and 45\% toxic. 
+This shows that the teacher applies a stricter toxicity boundary, especially for hostile or aggressive comments originally labeled as not toxic.
+
+\subsection{Evaluation metrics}
+
+The main classification metrics are accuracy, precision, recall, F1 score, and the confusion matrix. 
+Because the task is class imbalanced, F1 score is treated as more informative than accuracy measure.
+In addition, model compactness and computational cost are evaluated using model size on disk, average inference time per example, and examples processed per second on CPU.
+
+\subsection{Baselines and supervised student}
+
+The first baseline is a classical TF-IDF and Logistic Regression classifier.
+It represents the vector space and linear classification part of the NLP course.
+The second model is a supervised BERT-tiny student based on \texttt{prajjwal1/bert-tiny}.
+It's trained on the original dataset labels.
+Table~\ref{tab:original-baselines} shows the test results on the 1000 example of the original label test split.
+
+\begin{table}[h]
+\caption{Performance on the original label 1000 example test split.}\label{tab:original-baselines}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Model & Accuracy & Precision & Recall & F1 \\
+\midrule
+TF-IDF + Logistic Regression & 0.7780 & 0.6327 & 0.6200 & 0.6263 \\
+BERT-tiny supervised student & 0.8120 & 0.7240 & 0.6033 & 0.6582 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The supervised BERT-tiny student improves over the TF-IDF baseline in test accuracy and F1 score.
+The improvement is mostly due to higher precision.
+BERT-tiny produces fewer false positives than the TF-IDF model.
+However, its recall is slightly lower, which means that it is more conservative in predicting toxicity and misses slightly more toxic examples.
+This result motivates to use the compact Transformer models. And the TF-IDF baseline is still much smaller and faster.
+
+The test confusion matrix for the TF-IDF baseline is
+\begin{equation}
+\begin{bmatrix}
+592 & 108 \\
+114 & 186
+\end{bmatrix},
+\end{equation}
+while the BERT-tiny supervised student obtains
+\begin{equation}
+\begin{bmatrix}
+631 & 69 \\
+119 & 181
+\end{bmatrix}.
+\end{equation}
+These matrices show that BERT-tiny reduces false positives from 108 to 69, but slightly increases false negatives from 114 to 119.
+
+\subsection{Teacher labelling analysis}
+
+An OpenAI LLM teacher was used to label controlled stratified subsets of the data.
+The teacher prompt defined toxicity as insults, harassment, threats, hate, severe disrespect, or abusive language.
+It also stated that comments may be negative, political, or disagreeable without necessarily being toxic.
+The teacher returned a binary label, confidence scores, and a short reason.
+On the final teacher label test split, agreement between original and teacher labels is 0.8033.
+Table~\ref{tab:teacher-agreement} summarises the current teacher labelled subset.
+
+\begin{table}[ht]
+\caption{Agreement between original dataset labels and OpenAI teacher labels on the final teacher-labelled splits.}
+\label{tab:teacher-agreement}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Split & Rows & Original 0 & Original 1 & Teacher 0 & Teacher 1 & Agreement \\
+\midrule
+Train & 1500 & 1050 & 450 & 816 & 684 & 0.7627 \\
+Validation & 300 & 210 & 90 & 160 & 140 & 0.7733 \\
+Test & 300 & 210 & 90 & 167 & 133 & 0.8033 \\
+\botrule
+\end{tabular}
+\end{table}
+
+Two main disagreement patterns were observed:
+\begin{itemize}
+\item Original label 0, teacher label 1: comments that were originally annotated as non-toxic but contained hostile, demeaning, insulting, or identity-related language.
+\item Original label 1, teacher label 0: comments that contained sensitive, political, or negative terms, but did not necessarily contain direct harassment or abuse under the prompt definition.
+\end{itemize}
+
+The teacher agrees with the original labels on 75\% of the train subset, 80\% of the validation subset, and 80\% of the test subset. 
+The teacher labels a higher proportion of examples as toxic than the original dataset.
+This suggests that the teacher uses a stricter decision boundary for hostile language.
+For example, comments originally labelled as nontoxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
+Conversely, some comments originally labelled toxic were considered nontoxic by the teacher when they contained mild profanity or negative language without direct abuse.
+
+This confirms that the LLM teacher should not be treated as a gold standard.
+Instead, it defines a different decision boundary. 
+The distillation task is therefore best interpreted as teacher imitation, not a direct optimization of the original dataset labels.
+
+\subsection{Distilled student results}
+
+The first distillation attempt was trained from the base BERT-tiny model on a smaller teacher labeled set.
+It predicted too few toxic examples and performed poorly. 
+The final approach improved this by using more teacher labeled examples and initializing the distilled model from the supervised BERT-tiny checkpoint. 
+The resulting model was then finetuned on OpenAI teacher labels.
+
+Table~\ref{tab:distilled-results} reports the final distilled student results.
+The model is evaluated in comparison to two cases.
+First, against teacher labels that measures teacher imitation.
+Second, against original labels, that measures compatibility with the original dataset annotations.
+
+\begin{table}[h]
+\caption{Final distilled BERT-tiny results on the teacher labeled validation and test subsets.}\label{tab:distilled-results}
+\centering
+\begin{tabular}{llrr}
+\toprule
+Split & Evaluation target & Accuracy & F1 \\
+\midrule
+Validation & Teacher labels & 0.7433 & 0.7586 \\
+Test & Teacher labels & 0.7033 & 0.6962 \\
+Test & Original labels & 0.7067 & 0.6480 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The distilled student reaches an F1 score of 0.6962 against the teacher on the final test subset.
+This indicates that the compact model partially reaches the teacher's decision boundary.
+Against the original labels, its F1 score is 0.6480, slightly below the supervised BERT-tiny result of 0.6582 from the original label test set.
+This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
+
+The prediction distribution also shows a limitation.
+On the final test subset, the original labels contain 210 nottoxic and 90 toxic examples.
+The teacher labels contain 167 nottoxic and 133 toxic examples.
+The distilled model predicts 140 nottoxic and 160 toxic examples.
+Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
+But it slightly overpredicts the toxic class compared with the teacher.
+
+\subsection{Efficiency benchmark}
+
+Efficiency was measured on CPU using the test split.
+The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
+Results are shown in Table~\ref{tab:benchmark}.
+
+\begin{table}[h]
+\caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Model & Size (MB) & Time per example (ms) & Examples per sec \\
+\midrule
+TF-IDF and Logistic Regression & 0.89 & 0.0611 & 16379.73 \\
+BERT-tiny supervised student & 17.42 & 1.6061 & 622.61 \\
+BERT-tiny distilled student & 17.42 & 1.5578 & 641.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The TF-IDF baseline is approximately 19.6 times smaller than the BERT-tiny models and more than 25 times faster on CPU.
+However, its original label F1 score is lower than the supervised BERT-tiny model.
+The supervised and distilled BERT-tiny models have almost identical size and speed.
+It's expected, because they share the same architecture.
+Their difference is the decision boundary learned during training.
+The supervised model follows the original labels, while the distilled model adapts to the teacher labels.
+
+\begin{table}[h]
+\caption{Practical comparison between the OpenAI teacher and the distilled student.}
+\label{tab:teacher-student-efficiency}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Model & Deployment & Time per example & Examples per sec \\
+\midrule
+OpenAI LLM teacher & Remote API & 5440 ms & 0.18 \\
+BERT-tiny distilled student & Local CPU & 1.5578 ms & 641.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The OpenAI teacher is not directly comparable to the local models in terms of model size.
+Because it is accessed through a proprietary remote API and its internal parameters and serving hardware are not observable.
+However, the practical labelling time can be estimated from the teacher labelling runs.
+Labelling 2100 examples took approximately 3.17 hours, corresponding to about 5.44 seconds per example, or 0.18 examples per second.
+In contrast, the distilled BERT-tiny student runs locally on CPU at 1.5578 ms per example, or 641.94 examples per second.
+Therefore, the distilled student is approximately 3500 times faster in the measured deployment setting.
+
+This comparison illustrates the motivation for distillation.
+The OpenAI teacher is useful for producing high-level labels, confidence scores, and short explanations.
+But it is costly and slow to query repeatedly.
+The distilled student does not reproduce the full capabilities of the LLM, but it provides a compact local approximation of the teacher's behaviour on the selected toxicity classification task.
+
+\section{Concluding Remarks}\label{sec:conclusion}
+
+In this project a complete apprentice model pipeline was implemented and evaluated for toxic comment classification.
+The results show that a compact BERT-tiny student can be adapted to imitate an LLM teacher on a narrow NLP task.
+The final distilled model achieved an F1 score of 0.6962 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
+At the same time, the distilled model did not improve performance against the original dataset labels compared with the supervised BERT-tiny baseline.
+Because the teacher applies a different and stricter interpretation of toxicity, so optimizing for teacher imitation naturally changes the evaluation behaviour.
+
+The experiments also highlight important tradeoffs.
+The TF-IDF baseline is extremely efficient and interpretable, but weaker in F1 score.
+BERT-tiny provides better classification quality, but is significantly larger and slower.
+The OpenAI teacher, on the other hand, is powerful and can provide labels, confidence scores, and short explanations.
+But it is accessed through a remote API and is expensive and slow to query repeatedly.
+In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.5578 ms per example.
+This illustrates the practical motivation for distillation: expensive teacher decisions can be used offline to train a compact local model that is much faster at deployment time.
+Distillation does not change model size or speed because the architecture remains the same, but it changes the decision boundary of the student.
+This supports the idea that knowledge distillation can be used not only for compression, but also for task specific behavioural adaptation.
+
+There are several limitations.
+First, the project uses hard label distillation, not aclassical soft label distillation with temperature and KL-divergence.
+This loses information contained in the teacher's probability distribution.
+Second, the OpenAI teacher is not an objective ground truth and may be sensitive to prompt wording.
+Third, the final teacher labeled dataset is smaller than the original supervised training set because API labeling has cost and time constraints.
+Finally, the distilled student slightly overpredicts the toxic class compared with the teacher.
+It shows that threshold tuning or soft label training could improve calibration.
+
+Future work could extend the project in several directions.
+The most direct extension is soft label distillation using teacher probabilities and a KL-divergence loss.
+Another extension is threshold calibration on the validation set to better match the teacher's label distribution.
+Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
+Or include explanation based distillation.
+Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
+
+\begin{thebibliography}{9}
+
+\bibitem{hinton2015distilling}
+Hinton, G., Vinyals, O., Dean, J.: Distilling the knowledge in a neural network. arXiv preprint arXiv:1503.02531 (2015)
+
+\bibitem{devlin2019bert}
+Devlin, J., Chang, M.-W., Lee, K., Toutanova, K.: BERT: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of NAACL-HLT, pp. 4171--4186 (2019)
+
+\bibitem{jiao2020tinybert}
+Jiao, X., Yin, Y., Shang, L., Jiang, X., Chen, X., Li, L., Wang, F., Liu, Q.: TinyBERT: Distilling BERT for natural language understanding. In: Findings of the Association for Computational Linguistics: EMNLP 2020, pp. 4163--4174 (2020)
+
+\end{thebibliography}
+
+\end{document}
