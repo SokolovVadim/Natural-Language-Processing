@@ -20,7 +20,7 @@ class TfidfLogisticRegressionBaseline:
         ngram_range: tuple[int, int] = (1, 2),
         class_weight: str | dict[int, float] | None = "balanced",
         max_iter: int = 1000,
-        random_state: int = 42,
+        random_state: int = 1234,
     ) -> None:
         """Create the baseline classifier.
 
@@ -104,7 +104,7 @@ def create_tfidf_vectorizer(
 def create_logistic_regression_classifier(
     class_weight: str | dict[int, float] | None = "balanced",
     max_iter: int = 1000,
-    random_state: int = 42,
+    random_state: int = 1234,
 ) -> LogisticRegression:
     """Create a Logistic Regression classifier with project defaults."""
     return LogisticRegression(

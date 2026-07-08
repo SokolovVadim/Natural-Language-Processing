@@ -130,7 +130,7 @@ def select_teacher_examples(
 ) -> pd.DataFrame:
     """Select teacher-labeling examples with deterministic sampling."""
     sampling_strategy = teacher_config.get("sampling_strategy", "stratified").lower()
-    seed = int(teacher_config.get("seed", 42))
+    seed = int(teacher_config.get("seed", 12345))
 
     if sampling_strategy == "stratified":
         selected = select_stratified_examples(

@@ -72,7 +72,7 @@ def main() -> None:
     print(f"  test rows: {len(test_df)}")
 
     model = TfidfLogisticRegressionBaseline(
-        random_state=int(config.get("seed", 42)),
+        random_state=int(config.get("seed", 12345)),
     )
     model.fit(train_df[text_column], train_df[label_column])
 
