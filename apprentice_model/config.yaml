@@ -18,6 +18,14 @@ subsets:
   sampling_strategy: stratified
   positive_label_ratio: 0.3
 
+natural_splits:
+  train_size: 10000
+  validation_size: 2000
+  test_size: 3000
+  output_dir: data/processed_natural
+  summary_path: results/natural_split_summary.json
+  seed: 12345
+
 student_baseline:
   model_name: prajjwal1/bert-tiny
   max_length: 128
