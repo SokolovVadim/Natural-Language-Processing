@@ -35,10 +35,12 @@ data/processed/*
 data/processed_natural/*
 data/teacher_labels/*
 data/teacher_labels/*.tmp
+data/teacher_logits/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/processed_natural/.gitkeep
 !data/teacher_labels/.gitkeep
+!data/teacher_logits/.gitkeep
 
 # Results and model artifacts
 results/*
