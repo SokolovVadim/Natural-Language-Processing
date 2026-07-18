@@ -586,3 +586,47 @@ SO it confirms that the two fixes worked:
 
 1. using larger teacher labeled data
 2. initializing from the supervised BERT-tiny checkpoint
+
+
+
+
+# September project
+
+## Update the dataset split
+
+
+python3 scripts/prepare_natural_splits.py  ✔  1097  16:18:04
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Repo card metadata block was not found. Setting CardData to empty.
+Loaded dataset: SetFit/toxic_conversations
+Available splits: ['train', 'test']
+
+- train: 1754874 rows, columns: ['text', 'label', 'label_text']
+- test: 50000 rows, columns: ['text', 'label', 'label_text']
+  Source selection:
+  train: Hugging Face train split
+  validation: Hugging Face train split
+  test: Hugging Face test split
+
+train distribution:
+  rows: 10000
+  label=0: 9200
+  label=1: 800
+  toxic percentage: 8.00%
+  saved to: /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/train.csv
+
+validation distribution:
+  rows: 2000
+  label=0: 1840
+  label=1: 160
+  toxic percentage: 8.00%
+  saved to: /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/validation.csv
+
+test distribution:
+  rows: 3000
+  label=0: 2763
+  label=1: 237
+  toxic percentage: 7.90%
+  saved to: /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/test.csv
+
+Saved natural split summary to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/natural_split_summary.json

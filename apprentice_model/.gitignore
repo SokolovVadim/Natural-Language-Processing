@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE/editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Data artifacts
+data/raw/*
+data/processed/*
+data/processed_natural/*
+data/teacher_labels/*
+data/teacher_labels/*.tmp
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/processed_natural/.gitkeep
+!data/teacher_labels/.gitkeep
+
+# Results and model artifacts
+results/*
+!results/.gitkeep
+checkpoints/
+models/checkpoints/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Logs
+logs/
+*.log
