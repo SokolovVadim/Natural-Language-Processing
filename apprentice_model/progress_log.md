@@ -399,11 +399,9 @@ Original labels are 70/30, but teacher labels are closer to 50/50:
 
 This means the OpenAI teacher often marks comments as toxic even when the dataset says it's not.
 
-
 Then i did evaluation for 500 examples
 
 ## 8. Train distilled student
-
 
 python scripts/train_distilled_student.py
 
@@ -417,7 +415,6 @@ Training hard-label distilled BERT-tiny student...
   device: cpu
 
 ...
-
 
 Distilled student results:
 
@@ -457,9 +454,7 @@ Saved training history to /home/vadim/Github/Natural-Language-Processing/apprent
 
 So the distilled student is predicting too many non toxic labels and not enough toxic labels.
 
-
 ## 9. Train the model with larger size of examples
-
 
 python scripts/generate_teacher_labels.py --split train --limit 1500                                                                                 ✔  1115  00:13:30
 
@@ -484,8 +479,6 @@ them. W'
 enefit "
     train:2394:0e629935ca21ffd5: original=0 teacher=1 text='Why bother? I mean they are good at being hypocritical, but why even bother, we all know it is a charade.'
     train:4547:0cfe1a25bc3a4143: original=0 teacher=1 text='it is clear you either do not know anything about the ideology or you follow it.'
-
-
 
 python scripts/generate_teacher_labels.py --split validation --limit 300                                                                             ✔  1116  07:13:55
 
@@ -512,8 +505,6 @@ nd gripe ab"
  gives the '
     validation:529:ac8d2f029d058225: original=0 teacher=1 text='She was still a queue-jumper. Legal immigrants had to go through vetting processes, lotteries, etc. to get in
 . I have mo'
-
-
 
 python scripts/generate_teacher_labels.py --split test --limit 300                                                                                   ✔  1117  08:10:48
 
@@ -555,7 +546,6 @@ teacher_label
 Name: count, dtype: int64
 agreement: 0.7607
 
-
 validation
 rows: 335
 original:
@@ -584,12 +574,11 @@ teacher_label
 Name: count, dtype: int64
 agreement: 0.794
 
-
 Before distilled student against teacher was very weak:
 
 <pre class="overflow-visible! px-0!" data-start="166" data-end="187"><div class="relative w-full mt-4 mb-1"><div class=""><div class="contents"><div class="relative"><div class="h-full min-h-0 min-w-0"><div class="h-full min-h-0 min-w-0"><div class="border border-token-border-light border-radius-3xl corner-superellipse/1.1 rounded-3xl"><div class="h-full w-full border-radius-3xl bg-token-bg-elevated-secondary corner-superellipse/1.1 overflow-clip rounded-3xl lxnfua_clipPathFallback"><div class="pointer-events-none absolute end-1.5 top-1 z-2 md:end-2 md:top-1"></div><div class="relative"><div class="pe-11 pt-3"><div class="relative z-0 flex max-w-full"><div id="code-block-viewer" dir="ltr" class="q9tKkq_viewer cm-editor z-10 light:cm-light dark:cm-light flex h-full w-full flex-col items-stretch ͼs ͼ16"><div class="cm-scroller"><pre class="cm-content q9tKkq_readonly m-0"><code><span>F1 ≈ 0.27</span></code></pre></div></div></div></div></div></div></div></div></div></div></div></div></div></pre>
 
-now 
+now
 
 Test against teacher F1 = 0.6962
 
