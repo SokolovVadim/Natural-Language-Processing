@@ -171,49 +171,51 @@ The main classification metrics are accuracy, precision, recall, F1 score, and t
 Because the task is class imbalanced, F1 score is treated as more informative than accuracy measure.
 In addition, model compactness and computational cost are evaluated using model size on disk, average inference time per example, and examples processed per second on CPU.
 
-\subsection{Classical baseline and supervised BERT-base teacher}
+\subsection{Supervised baselines and BERT-base teacher}
 
 The first baseline is a classical TF-IDF and Logistic Regression classifier.
 It represents the vector space and linear classification part of the NLP course.
 This baseline was retrained on the natural distribution split.
 It was using unigram and bigram TF-IDF features, a maximum of 20,000 features, and balanced Logistic Regression.
+The compact supervised student baseline is \texttt{prajjwal1/bert-tiny}.
+It's finetuned on the same natural distribution original labels.
 The local supervised teacher is a pretrained \texttt{bert-base-uncased} model.
 It's finetuned on the same natural distribution original labels.
 It is important to distinguish this from BERT pretraining.
-The model is not trained from scratch, but finetuned for toxic comment classification.
-Because the dataset is imbalanced, the BERT-base training uses weighted cross-entropy with class weights computed from the training distribution.
+The Transformer models are not trained from scratch, but finetuned for toxic comment classification.
+Because the dataset is imbalanced, the BERT-tiny and BERT-base training runs use weighted cross-entropy with class weights computed from the training distribution.
 
-For both models, a default threshold of 0.5 was evaluated.
+For all supervised models, a default threshold of 0.5 was evaluated.
 In addition, the range of thresholds from 0.05 to 0.95 was checked on the validation set.
 And the threshold with the best validation F1 was selected.
 The selected threshold was then evaluated once on the test set.
 Threshold tuning is validation based and does not use test labels for model selection.
 
-Table~\ref{tab:natural-baselines} shows the test results on the 3,000 example natural distribution test split.
+Table~\ref{tab:natural-baselines} shows the main comparable test results at the default threshold on the 3,000 example natural distribution test split.
 
 \begin{table}[htbp]
-\caption{Performance on the natural-distribution 3,000 example test split.}\label{tab:natural-baselines}
+\caption{Main supervised comparison on the natural distribution 3,000 example test split using default threshold 0.50.}\label{tab:natural-baselines}
 \centering
-\begin{tabular}{lrrrrr}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
-Model & Threshold & Accuracy & Precision & Recall & F1 \\
+Model & Accuracy & Precision & Recall & F1 & TN & FP & FN & TP \\
 \midrule
-TF-IDF + Logistic Regression & 0.50 & 0.897 & 0.371 & 0.447 & 0.406 \\
-TF-IDF + Logistic Regression & 0.52 & 0.902 & 0.387 & 0.414 & 0.400 \\
-BERT-base supervised teacher & 0.50 & 0.931 & 0.551 & 0.709 & 0.620 \\
-BERT-base supervised teacher & 0.49 & 0.930 & 0.545 & 0.713 & 0.618 \\
+TF-IDF + Logistic Regression & 0.897 & 0.372 & 0.447 & 0.406 & 2584 & 179 & 131 & 106 \\
+BERT-tiny supervised & 0.886 & 0.384 & 0.730 & 0.504 & 2486 & 277 & 64 & 173 \\
+BERT-base supervised teacher & 0.931 & 0.551 & 0.709 & 0.620 & 2626 & 137 & 69 & 168 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The BERT-base supervised teacher substantially improves over the TF-IDF baseline on the natural test split.
-At the default threshold, BERT-base reaches an F1 score of 0.62, compared with 0.406 for TF-IDF.
-The improvement comes mainly from much higher recall on the toxic class.
-The TF-IDF model detects 106 of 237 toxic test examples at threshold 0.5, while BERT-base detects 168 of 237.
-The validation-selected thresholds are close to 0.5 for both models.
-For TF-IDF, validation tuning selected 0.52, improving validation F1 from 0.435 to 0.444, but test F1 decreased slightly from 0.406 to 0.4000.
-For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.615 to 0.627, but test F1 changed only slightly from 0.62 to 0.618.
-Therefore, the default threshold remains a strong operating point for the test set, while the validation tuning results are still useful for calibration analysis.
+At the default threshold, BERT-base reaches an F1 score of 0.620, compared with 0.504 for BERT-tiny and 0.406 for TF-IDF.
+BERT-tiny is lower than BERT-base, but it clearly improves recall and F1 over the classical baseline.
+The TF-IDF model detects 106 of 237 toxic test examples at threshold 0.5.
+BERT-tiny detects 173 of 237 toxic examples, but also produces 277 false positives.
+This shows that BERT-tiny over-predicts the toxic class at the default threshold.
+BERT-base detects 168 toxic examples while reducing false positives to 137, giving the best precision-recall balance.
 
 The default-threshold test confusion matrix for the TF-IDF baseline is
 \begin{equation}
@@ -222,14 +224,24 @@ The default-threshold test confusion matrix for the TF-IDF baseline is
 131 & 106
 \end{bmatrix},
 \end{equation}
-while the BERT-base supervised teacher obtains
+the BERT-tiny supervised model obtains
+\begin{equation}
+\begin{bmatrix}
+2486 & 277 \\
+64 & 173
+\end{bmatrix},
+\end{equation}
+and the BERT-base supervised teacher obtains
 \begin{equation}
 \begin{bmatrix}
 2626 & 137 \\
 69 & 168
 \end{bmatrix}.
 \end{equation}
-These matrices show that BERT-base reduces both false positives and false negatives compared with the TF-IDF baseline.
+These matrices show the tradeoff between the compact and larger Transformer models.
+BERT-tiny reduces false negatives compared with TF-IDF, but increases false positives.
+BERT-base gives the strongest overall result, reducing both false positives and false negatives compared with TF-IDF.
+This justifies using BERT-base as the teacher model for later soft-label distillation into BERT-tiny.
 The finetuned BERT-base model saved in \texttt{results/bert\_base\_supervised/} matches the best validation checkpoint, that was at epoch 3 with validation F1 equal to 0.615.
 The model logits and probabilities were exported for the train, validation, and test splits for future soft-label distillation.
 
@@ -257,15 +269,22 @@ Epoch & Train loss & Validation loss & Validation accuracy & Validation F1 \\
 \caption{Validation threshold tuning summary for the natural distribution experiment.}\label{tab:threshold-tuning}
 \centering
 \small
-\begin{tabular}{@{}lrrrr@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-Model & Threshold & Val. F1 & Test F1 0.5 & Test F1 tuned \\
+Model & Tuned threshold & Test F1 at 0.50 & Test F1 tuned \\
 \midrule
-TF-IDF + Logistic Regression & 0.52 & 0.444 & 0.406 & 0.400 \\
-BERT-base supervised teacher & 0.49 & 0.627 & 0.620 & 0.618 \\
+TF-IDF + Logistic Regression & 0.52 & 0.406 & 0.400 \\
+BERT-tiny supervised & 0.75 & 0.504 & 0.543 \\
+BERT-base supervised teacher & 0.49 & 0.620 & 0.618 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The validation-tuned results are treated as an additional calibration analysis.
+Threshold tuning decreases test F1 for TF-IDF and BERT-base, but improves BERT-tiny from 0.504 to 0.543.
+This is consistent with the default threshold behaviour of BERT-tiny.
+Raising the threshold reduces false positives and improves its test F1.
+For the main comparison, however, Table~\ref{tab:natural-baselines} keeps the default threshold fixed at 0.50 for all models.
 
 \subsection{Teacher labelling analysis}
 
