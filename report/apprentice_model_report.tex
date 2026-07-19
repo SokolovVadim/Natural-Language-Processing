@@ -140,20 +140,20 @@ The original distribution is highly imbalanced, with around 8\% toxic examples.
 The main original-label experiments use natural distribution stratified splits.
 The training and validation splits are sampled from the original Hugging Face training split, while the test split is sampled from the original Hugging Face test split.
 The resulting splits preserve the natural class imbalance as closely as possible: 10,000 training examples, 2,000 validation examples, and 3,000 test examples.
-The toxic class represents 8.00\% of the train and validation splits and 7.90\% of the test split, as shown in Table~\ref{tab:natural-splits}.
+The toxic class represents 8\% of the train and validation splits and 7.90\% of the test split, as shown in Table~\ref{tab:natural-splits}.
 For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
 Their distributions are reported in Table~\ref{tab:teacher-agreement}.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{Natural-distribution stratified splits used for the main original-label experiments.}\label{tab:natural-splits}
 \centering
 \begin{tabular}{lrrrr}
 \toprule
 Split & Rows & Label 0 & Label 1 & Toxic \% \\
 \midrule
-Train & 10000 & 9200 & 800 & 8.00 \\
-Validation & 2000 & 1840 & 160 & 8.00 \\
-Test & 3000 & 2763 & 237 & 7.90 \\
+Train & 10000 & 9200 & 800 & 8.0 \\
+Validation & 2000 & 1840 & 160 & 8.0 \\
+Test & 3000 & 2763 & 237 & 7.9 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -191,28 +191,28 @@ Threshold tuning is validation based and does not use test labels for model sele
 
 Table~\ref{tab:natural-baselines} shows the test results on the 3,000 example natural distribution test split.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{Performance on the natural-distribution 3,000 example test split.}\label{tab:natural-baselines}
 \centering
 \begin{tabular}{lrrrrr}
 \toprule
 Model & Threshold & Accuracy & Precision & Recall & F1 \\
 \midrule
-TF-IDF + Logistic Regression & 0.50 & 0.8967 & 0.3719 & 0.4473 & 0.406 \\
-TF-IDF + Logistic Regression & 0.52 & 0.9020 & 0.3874 & 0.4135 & 0.400 \\
-BERT-base supervised teacher & 0.50 & 0.9313 & 0.5508 & 0.7089 & 0.620 \\
-BERT-base supervised teacher & 0.49 & 0.9303 & 0.5452 & 0.7131 & 0.618 \\
+TF-IDF + Logistic Regression & 0.50 & 0.897 & 0.371 & 0.447 & 0.406 \\
+TF-IDF + Logistic Regression & 0.52 & 0.902 & 0.387 & 0.414 & 0.400 \\
+BERT-base supervised teacher & 0.50 & 0.931 & 0.551 & 0.709 & 0.620 \\
+BERT-base supervised teacher & 0.49 & 0.930 & 0.545 & 0.713 & 0.618 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The BERT-base supervised teacher substantially improves over the TF-IDF baseline on the natural test split.
-At the default threshold, BERT-base reaches an F1 score of 0.62, compared with 0.4061 for TF-IDF.
+At the default threshold, BERT-base reaches an F1 score of 0.62, compared with 0.406 for TF-IDF.
 The improvement comes mainly from much higher recall on the toxic class.
 The TF-IDF model detects 106 of 237 toxic test examples at threshold 0.5, while BERT-base detects 168 of 237.
 The validation-selected thresholds are close to 0.5 for both models.
-For TF-IDF, validation tuning selected 0.52, improving validation F1 from 0.4348 to 0.4444, but test F1 decreased slightly from 0.4061 to 0.4000.
-For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.6154 to 0.6271, but test F1 changed only slightly from 0.62 to 0.618.
+For TF-IDF, validation tuning selected 0.52, improving validation F1 from 0.435 to 0.444, but test F1 decreased slightly from 0.406 to 0.4000.
+For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.615 to 0.627, but test F1 changed only slightly from 0.62 to 0.618.
 Therefore, the default threshold remains a strong operating point for the test set, while the validation tuning results are still useful for calibration analysis.
 
 The default-threshold test confusion matrix for the TF-IDF baseline is
@@ -230,30 +230,30 @@ while the BERT-base supervised teacher obtains
 \end{bmatrix}.
 \end{equation}
 These matrices show that BERT-base reduces both false positives and false negatives compared with the TF-IDF baseline.
-The finetuned BERT-base model saved in \texttt{results/bert\_base\_supervised/} matches the best validation checkpoint, that was at epoch 3 with validation F1 equal to 0.6154.
+The finetuned BERT-base model saved in \texttt{results/bert\_base\_supervised/} matches the best validation checkpoint, that was at epoch 3 with validation F1 equal to 0.615.
 The model logits and probabilities were exported for the train, validation, and test splits for future soft-label distillation.
 
 The BERT-base validation curve is reported in Table~\ref{tab:bert-base-history}.
 The model reaches its best validation F1 at epoch 3.
 After that point, training loss continues to decrease but validation loss increases, which indicates mild overfitting.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{BERT-base supervised teacher validation history.}\label{tab:bert-base-history}
 \centering
 \begin{tabular}{rrrrr}
 \toprule
 Epoch & Train loss & Validation loss & Validation accuracy & Validation F1 \\
 \midrule
-1 & 0.4127 & 0.3104 & 0.9295 & 0.6137 \\
-2 & 0.2118 & 0.3221 & 0.8630 & 0.5000 \\
-3 & 0.1166 & 0.3505 & 0.9325 & 0.6154 \\
-4 & 0.0687 & 0.6382 & 0.9275 & 0.5983 \\
-5 & 0.0436 & 0.8335 & 0.9390 & 0.5987 \\
+1 & 0.413 & 0.310 & 0.930 & 0.614 \\
+2 & 0.212 & 0.322 & 0.863 & 0.500 \\
+3 & 0.117 & 0.351 & 0.933 & 0.615 \\
+4 & 0.069 & 0.638 & 0.928 & 0.598 \\
+5 & 0.044 & 0.834 & 0.939 & 0.599 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{Validation threshold tuning summary for the natural distribution experiment.}\label{tab:threshold-tuning}
 \centering
 \small
@@ -261,8 +261,8 @@ Epoch & Train loss & Validation loss & Validation accuracy & Validation F1 \\
 \toprule
 Model & Threshold & Val. F1 & Test F1 0.5 & Test F1 tuned \\
 \midrule
-TF-IDF + Logistic Regression & 0.52 & 0.4444 & 0.406 & 0.400 \\
-BERT-base supervised teacher & 0.49 & 0.6271 & 0.620 & 0.618 \\
+TF-IDF + Logistic Regression & 0.52 & 0.444 & 0.406 & 0.400 \\
+BERT-base supervised teacher & 0.49 & 0.627 & 0.620 & 0.618 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -273,19 +273,19 @@ An OpenAI LLM teacher was used to label controlled stratified subsets of the dat
 The teacher prompt defined toxicity as insults, harassment, threats, hate, severe disrespect, or abusive language.
 It also stated that comments may be negative, political, or disagreeable without necessarily being toxic.
 The teacher returned a binary label, confidence scores, and a short reason.
-On the final teacher label test split, agreement between original and teacher labels is 0.8033.
+On the final teacher label test split, agreement between original and teacher labels is 0.803.
 Table~\ref{tab:teacher-agreement} summarises the current teacher labelled subset.
 
-\begin{table}[ht]
+\begin{table}[htbp]
 \caption{Agreement between original dataset labels and OpenAI teacher labels on the final teacher-labelled splits.}
 \label{tab:teacher-agreement}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
 Split & Rows & Original 0 & Original 1 & Teacher 0 & Teacher 1 & Agreement \\
 \midrule
-Train & 1500 & 1050 & 450 & 816 & 684 & 0.7627 \\
-Validation & 300 & 210 & 90 & 160 & 140 & 0.7733 \\
-Test & 300 & 210 & 90 & 167 & 133 & 0.8033 \\
+Train & 1500 & 1050 & 450 & 816 & 684 & 0.763 \\
+Validation & 300 & 210 & 90 & 160 & 140 & 0.773 \\
+Test & 300 & 210 & 90 & 167 & 133 & 0.803 \\
 \botrule
 \end{tabular}
 \end{table}
@@ -318,7 +318,7 @@ The model is evaluated in comparison to two cases.
 First, against teacher labels that measures teacher imitation.
 Second, against original labels, that measures compatibility with the original dataset annotations.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{Final distilled BERT-tiny results on the teacher labeled validation and test subsets.}\label{tab:distilled-results}
 \centering
 \begin{tabular}{llrr}
@@ -334,8 +334,8 @@ Test & Original labels & 0.707 & 0.648 \\
 
 The distilled student reaches an F1 score of 0.696 against the teacher on the final test subset.
 This indicates that the compact model partially reaches the teacher's decision boundary.
-Against the original labels on the teacher-labelled test subset, its F1 score is 0.6480.
-This is close to the supervised BERT-tiny result of 0.6582 obtained on the larger 1000-example original-label test split.
+Against the original labels on the teacher-labelled test subset, its F1 score is 0.648.
+This is close to the supervised BERT-tiny result of 0.658 obtained on the larger 1000-example original-label test split.
 But the two numbers are not perfectly comparable because they are computed on different test subsets.
 This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
 
@@ -352,16 +352,16 @@ Efficiency was measured on CPU using the test split.
 The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
 Results are shown in Table~\ref{tab:benchmark}.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
 \centering
 \begin{tabular}{lrrr}
 \toprule
 Model & Size (MB) & Time per example (ms) & Examples per sec \\
 \midrule
-TF-IDF and Logistic Regression & 0.89 & 0.0611 & 16379.73 \\
-BERT-tiny supervised student & 17.42 & 1.6061 & 622.61 \\
-BERT-tiny distilled student & 17.42 & 1.5578 & 641.94 \\
+TF-IDF and Logistic Regression & 0.89 & 0.061 & 16379.73 \\
+BERT-tiny supervised student & 17.42 & 1.606 & 622.61 \\
+BERT-tiny distilled student & 17.42 & 1.558 & 641.94 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -373,7 +373,7 @@ It's expected, because they share the same architecture.
 Their difference is the decision boundary learned during training.
 The supervised model follows the original labels, while the distilled model adapts to the teacher labels.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \caption{Practical comparison between the OpenAI teacher and the distilled student.}
 \label{tab:teacher-student-efficiency}
 \centering
@@ -382,7 +382,7 @@ The supervised model follows the original labels, while the distilled model adap
 Model & Deployment & Time per example & Examples per sec \\
 \midrule
 OpenAI LLM teacher & Remote API & 5440 ms & 0.18 \\
-BERT-tiny distilled student & Local CPU & 1.5578 ms & 641.94 \\
+BERT-tiny distilled student & Local CPU & 1.558 ms & 641.94 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -391,7 +391,7 @@ The OpenAI teacher is not directly comparable to the local models in terms of mo
 Because it is accessed through a proprietary remote API and its internal parameters and serving hardware are not observable.
 However, the practical labelling time can be estimated from the teacher labelling runs.
 Labelling 2100 examples took approximately 3.17 hours, corresponding to about 5.44 seconds per example, or 0.18 examples per second.
-In contrast, the distilled BERT-tiny student runs locally on CPU at 1.5578 ms per example, or 641.94 examples per second.
+In contrast, the distilled BERT-tiny student runs locally on CPU at 1.558 ms per example, or 641.94 examples per second.
 Therefore, the distilled student is approximately 3500 times faster in the measured deployment setting.
 
 This comparison illustrates the motivation for distillation.
@@ -415,7 +415,7 @@ The TF-IDF baseline is extremely efficient and interpretable, but weaker in F1 s
 BERT-tiny and BERT-base provide better classification quality, but are significantly larger and slower.
 The OpenAI teacher, on the other hand, is powerful and can provide labels, confidence scores, and short explanations.
 But it is accessed through a remote API and is expensive and slow to query repeatedly.
-In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.5578 ms per example.
+In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.558 ms per example.
 This illustrates the practical motivation for distillation: expensive teacher decisions can be used offline to train a compact local model that is much faster at deployment time.
 Distillation does not change model size or speed because the architecture remains the same, but it changes the decision boundary of the student.
 This supports the idea that knowledge distillation can be used not only for compression, but also for task specific behavioural adaptation.
