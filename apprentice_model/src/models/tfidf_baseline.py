@@ -18,8 +18,11 @@ class TfidfLogisticRegressionBaseline:
         self,
         max_features: int = 20_000,
         ngram_range: tuple[int, int] = (1, 2),
+        lowercase: bool = True,
+        stop_words: str | list[str] | None = None,
         class_weight: str | dict[int, float] | None = "balanced",
         max_iter: int = 1000,
+        solver: str = "liblinear",
         random_state: int = 1234,
     ) -> None:
         """Create the baseline classifier.
@@ -27,14 +30,20 @@ class TfidfLogisticRegressionBaseline:
         Args:
             max_features: Maximum number of TF-IDF features.
             ngram_range: Lower and upper n-gram range for TF-IDF features.
+            lowercase: Whether TF-IDF should lowercase text.
+            stop_words: Stop words passed to TF-IDF.
             class_weight: Logistic Regression class weighting strategy.
             max_iter: Maximum optimizer iterations for Logistic Regression.
+            solver: Logistic Regression solver.
             random_state: Random seed for Logistic Regression.
         """
         self.max_features = max_features
         self.ngram_range = ngram_range
+        self.lowercase = lowercase
+        self.stop_words = stop_words
         self.class_weight = class_weight
         self.max_iter = max_iter
+        self.solver = solver
         self.random_state = random_state
         self.pipeline = self._build_pipeline()
 
@@ -43,10 +52,13 @@ class TfidfLogisticRegressionBaseline:
         vectorizer = TfidfVectorizer(
             max_features=self.max_features,
             ngram_range=self.ngram_range,
+            lowercase=self.lowercase,
+            stop_words=self.stop_words,
         )
         classifier = LogisticRegression(
             class_weight=self.class_weight,
             max_iter=self.max_iter,
+            solver=self.solver,
             random_state=self.random_state,
         )
         return Pipeline(
@@ -93,22 +105,28 @@ class TfidfLogisticRegressionBaseline:
 def create_tfidf_vectorizer(
     max_features: int = 20_000,
     ngram_range: tuple[int, int] = (1, 2),
+    lowercase: bool = True,
+    stop_words: str | list[str] | None = None,
 ) -> TfidfVectorizer:
     """Create a TF-IDF vectorizer with project defaults."""
     return TfidfVectorizer(
         max_features=max_features,
         ngram_range=ngram_range,
+        lowercase=lowercase,
+        stop_words=stop_words,
     )
 
 
 def create_logistic_regression_classifier(
     class_weight: str | dict[int, float] | None = "balanced",
     max_iter: int = 1000,
+    solver: str = "liblinear",
     random_state: int = 1234,
 ) -> LogisticRegression:
     """Create a Logistic Regression classifier with project defaults."""
     return LogisticRegression(
         class_weight=class_weight,
         max_iter=max_iter,
+        solver=solver,
         random_state=random_state,
     )

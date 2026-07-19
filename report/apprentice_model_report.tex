@@ -25,8 +25,10 @@
 \abstract{This project studies knowledge distillation for Natural Language Processing through an ``apprentice model''. 
 The goal is to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
 The selected task is toxic comment classification. 
-The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT tiny student model, that was trained on original dataset labels, and an LLM OpenAI teacher used to relabel a controlled subset of examples. 
-The supervised BERT-tiny student improves over the TF-IDF baseline in accuracy and F1 score, but is larger and slower at inference time.
+The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT-base teacher trained on original dataset labels, a supervised BERT tiny student model.
+An LLM OpenAI teacher was used to relabel a controlled subset of examples. 
+On the natural distribution test split, the TF-IDF baseline got an F1 score of 0.4061 at the default threshold of 0.5, while the supervised BERT-base teacher obtains an F1 score of 0.6199.
+Based on validation performance, the thresholds of 0.52 were selected for TF-IDF and 0.49 for BERT-base, but did not improve test F1 in either case.
 The final distilled student achieves an F1 score of 0.6962 against teacher labels. It shows partial imitation of the teacher's decision boundary.
 The OpenAI teacher is much slower to query in the measured labelling pipeline, while the distilled student provides a compact local approximation for the selected toxicity classification task.}
 
@@ -109,13 +111,15 @@ In this project the implemented experiment focuses on hard label teacher imitati
 
 \subsection{Pipeline overview}
 
-The project pipeline consists of four stages:
+The project pipeline consists of five stages:
 
 \begin{enumerate}
     \item \textbf{Data preparation.} The dataset is loaded from Hugging Face and converted into reproducible train, validation, and test CSV splits. 
-    Because the original dataset is quite imbalanced, controlled stratified subsets are created.
+    The main supervised experiments use natural-distribution stratified splits that preserve the original class imbalance.
     \item \textbf{Baseline models.} A TF-IDF and Logistic Regression model is trained as a baseline. 
     A BERT-tiny model is then finetuned on the original labels as a supervised Transformer baseline.
+    \item \textbf{Supervised local teacher.} A BERT-base model is finetuned on the natural distribution original labels.
+    It is used to produce logits and probabilities for later soft-label distillation.
     \item \textbf{Teacher labelling.} An OpenAI LLM teacher labels a stratified subset of examples and returns a binary label, confidence scores, and a short reason. 
     This step produces a teacher labelled dataset for distillation.
     \item \textbf{Distilled student.} Train a distilled BERT-tiny student on teacher labels, initialized from the supervised BERT-tiny run. 
@@ -133,18 +137,33 @@ The experiments use the \texttt{SetFit/toxic\_conversations} dataset from Huggin
 The dataset contains comments labelled as toxic or not toxic and the columns \texttt{text}, \texttt{label}, and \texttt{label\_text}. 
 The full dataset contains more than 1.7 million training examples and 50,000 test examples.
 The original distribution is highly imbalanced, with around 8\% toxic examples. 
-To avoid wrong accuracy scores and to make the experiments faster and more controlled, stratified subsets were created with a 70 to 30 ratio between not toxic and toxic examples.
-For the main original label experiments, the following processed splits were used: 5000 training examples, 1000 validation examples, and 1000 test examples. 
+The main original-label experiments use natural distribution stratified splits.
+The training and validation splits are sampled from the original Hugging Face training split, while the test split is sampled from the original Hugging Face test split.
+The resulting splits preserve the natural class imbalance as closely as possible: 10,000 training examples, 2,000 validation examples, and 3,000 test examples.
+The toxic class represents 8.00\% of the train and validation splits and 7.90\% of the test split, as shown in Table~\ref{tab:natural-splits}.
 For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
 Their distributions are reported in Table~\ref{tab:teacher-agreement}.
+
+\begin{table}[h]
+\caption{Natural-distribution stratified splits used for the main original-label experiments.}\label{tab:natural-splits}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Split & Rows & Label 0 & Label 1 & Toxic \% \\
+\midrule
+Train & 10000 & 9200 & 800 & 8.00 \\
+Validation & 2000 & 1840 & 160 & 8.00 \\
+Test & 3000 & 2763 & 237 & 7.90 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 Preprocessing was intentionally minimal.
 Handled empty values, leading and trailing spaces were removed, and repeated spaces were normalised. 
 No lowercasing or punctuation removal was applied, because Transformer tokenizers are designed to process raw text.
-The teacher consistently assigns more examples to the toxic class than the original annotations. 
-The original split is fixed at 70\% not toxic and 30\% toxic.
-But the teacher distribution is closer to 55\% not toxic and 45\% toxic. 
-This shows that the teacher applies a stricter toxicity boundary, especially for hostile or aggressive comments originally labeled as not toxic.
+In the separate OpenAI teacher-labelled subset, the selected original labels follow a controlled 70\% not toxic and 30\% toxic distribution.
+The OpenAI teacher consistently assigns more examples to the toxic class than the original annotations, with a distribution closer to 55\% not toxic and 45\% toxic.
+This shows that the OpenAI teacher applies a stricter toxicity boundary, especially for hostile or aggressive comments originally labelled as not toxic.
 
 \subsection{Evaluation metrics}
 
@@ -152,48 +171,101 @@ The main classification metrics are accuracy, precision, recall, F1 score, and t
 Because the task is class imbalanced, F1 score is treated as more informative than accuracy measure.
 In addition, model compactness and computational cost are evaluated using model size on disk, average inference time per example, and examples processed per second on CPU.
 
-\subsection{Baselines and supervised student}
+\subsection{Classical baseline and supervised BERT-base teacher}
 
 The first baseline is a classical TF-IDF and Logistic Regression classifier.
 It represents the vector space and linear classification part of the NLP course.
-The second model is a supervised BERT-tiny student based on \texttt{prajjwal1/bert-tiny}.
-It's trained on the original dataset labels.
-Table~\ref{tab:original-baselines} shows the test results on the 1000 example of the original label test split.
+This baseline was retrained on the natural distribution split.
+It was using unigram and bigram TF-IDF features, a maximum of 20,000 features, and balanced Logistic Regression.
+The local supervised teacher is a pretrained \texttt{bert-base-uncased} model.
+It's finetuned on the same natural distribution original labels.
+It is important to distinguish this from BERT pretraining.
+The model is not trained from scratch, but finetuned for toxic comment classification.
+Because the dataset is imbalanced, the BERT-base training uses weighted cross-entropy with class weights computed from the training distribution.
+
+For both models, a default threshold of 0.5 was evaluated.
+In addition, the range of thresholds from 0.05 to 0.95 was checked on the validation set.
+And the threshold with the best validation F1 was selected.
+The selected threshold was then evaluated once on the test set.
+Threshold tuning is validation based and does not use test labels for model selection.
+
+Table~\ref{tab:natural-baselines} shows the test results on the 3,000 example natural distribution test split.
 
 \begin{table}[h]
-\caption{Performance on the original label 1000 example test split.}\label{tab:original-baselines}
+\caption{Performance on the natural-distribution 3,000 example test split.}\label{tab:natural-baselines}
 \centering
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-Model & Accuracy & Precision & Recall & F1 \\
+Model & Threshold & Accuracy & Precision & Recall & F1 \\
 \midrule
-TF-IDF + Logistic Regression & 0.7780 & 0.6327 & 0.6200 & 0.6263 \\
-BERT-tiny supervised student & 0.8120 & 0.7240 & 0.6033 & 0.6582 \\
+TF-IDF + Logistic Regression & 0.50 & 0.8967 & 0.3719 & 0.4473 & 0.4061 \\
+TF-IDF + Logistic Regression & 0.52 & 0.9020 & 0.3874 & 0.4135 & 0.4000 \\
+BERT-base supervised teacher & 0.50 & 0.9313 & 0.5508 & 0.7089 & 0.6199 \\
+BERT-base supervised teacher & 0.49 & 0.9303 & 0.5452 & 0.7131 & 0.6179 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The supervised BERT-tiny student improves over the TF-IDF baseline in test accuracy and F1 score.
-The improvement is mostly due to higher precision.
-BERT-tiny produces fewer false positives than the TF-IDF model.
-However, its recall is slightly lower, which means that it is more conservative in predicting toxicity and misses slightly more toxic examples.
-This result motivates to use the compact Transformer models. And the TF-IDF baseline is still much smaller and faster.
+The BERT-base supervised teacher substantially improves over the TF-IDF baseline on the natural test split.
+At the default threshold, BERT-base reaches an F1 score of 0.6199, compared with 0.4061 for TF-IDF.
+The improvement comes mainly from much higher recall on the toxic class.
+The TF-IDF model detects 106 of 237 toxic test examples at threshold 0.5, while BERT-base detects 168 of 237.
+The validation-selected thresholds are close to 0.5 for both models.
+For TF-IDF, validation tuning selected 0.52, improving validation F1 from 0.4348 to 0.4444, but test F1 decreased slightly from 0.4061 to 0.4000.
+For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.6154 to 0.6271, but test F1 changed only slightly from 0.6199 to 0.6179.
+Therefore, the default threshold remains a strong operating point for the test set, while the validation tuning results are still useful for calibration analysis.
 
-The test confusion matrix for the TF-IDF baseline is
+The default-threshold test confusion matrix for the TF-IDF baseline is
 \begin{equation}
 \begin{bmatrix}
-592 & 108 \\
-114 & 186
+2584 & 179 \\
+131 & 106
 \end{bmatrix},
 \end{equation}
-while the BERT-tiny supervised student obtains
+while the BERT-base supervised teacher obtains
 \begin{equation}
 \begin{bmatrix}
-631 & 69 \\
-119 & 181
+2626 & 137 \\
+69 & 168
 \end{bmatrix}.
 \end{equation}
-These matrices show that BERT-tiny reduces false positives from 108 to 69, but slightly increases false negatives from 114 to 119.
+These matrices show that BERT-base reduces both false positives and false negatives compared with the TF-IDF baseline.
+The finetuned BERT-base model saved in \texttt{results/bert\_base\_supervised/} matches the best validation checkpoint, that was at epoch 3 with validation F1 equal to 0.6154.
+The model logits and probabilities were exported for the train, validation, and test splits for future soft-label distillation.
+
+The BERT-base validation curve is reported in Table~\ref{tab:bert-base-history}.
+The model reaches its best validation F1 at epoch 3.
+After that point, training loss continues to decrease but validation loss increases, which indicates mild overfitting.
+
+\begin{table}[h]
+\caption{BERT-base supervised teacher validation history.}\label{tab:bert-base-history}
+\centering
+\begin{tabular}{rrrrr}
+\toprule
+Epoch & Train loss & Validation loss & Validation accuracy & Validation F1 \\
+\midrule
+1 & 0.4127 & 0.3104 & 0.9295 & 0.6137 \\
+2 & 0.2118 & 0.3221 & 0.8630 & 0.5000 \\
+3 & 0.1166 & 0.3505 & 0.9325 & 0.6154 \\
+4 & 0.0687 & 0.6382 & 0.9275 & 0.5983 \\
+5 & 0.0436 & 0.8335 & 0.9390 & 0.5987 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Validation threshold tuning summary for the natural distribution experiment.}\label{tab:threshold-tuning}
+\centering
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Model & Threshold & Val. F1 & Test F1 0.5 & Test F1 tuned \\
+\midrule
+TF-IDF + Logistic Regression & 0.52 & 0.4444 & 0.4061 & 0.4000 \\
+BERT-base supervised teacher & 0.49 & 0.6271 & 0.6199 & 0.6179 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Teacher labelling analysis}
 
@@ -227,8 +299,8 @@ Two main disagreement patterns were observed:
 The teacher agrees with the original labels on 76.27\% of the train split, 77.33\% of the validation split, and 80.33\% of the test split. 
 The teacher labels a higher proportion of examples as toxic than the original dataset.
 This suggests that the teacher uses a stricter decision boundary for hostile language.
-For example, comments originally labelled as nontoxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
-Conversely, some comments originally labelled toxic were considered nontoxic by the teacher when they contained mild profanity or negative language without direct abuse.
+For example, comments originally labelled as non-toxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
+Some comments originally labelled toxic were considered non-toxic by the teacher when they contained mild profanity or negative language without direct abuse.
 
 This confirms that the LLM teacher should not be treated as a gold standard.
 Instead, it defines a different decision boundary. 
@@ -268,9 +340,9 @@ But the two numbers are not perfectly comparable because they are computed on di
 This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
 
 The prediction distribution also shows a limitation.
-On the final test subset, the original labels contain 210 nottoxic and 90 toxic examples.
-The teacher labels contain 167 nottoxic and 133 toxic examples.
-The distilled model predicts 140 nottoxic and 160 toxic examples.
+On the final test subset, the original labels contain 210 non-toxic and 90 toxic examples.
+The teacher labels contain 167 non-toxic and 133 toxic examples.
+The distilled model predicts 140 non-toxic and 160 toxic examples.
 Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
 But it slightly overpredicts the toxic class compared with the teacher.
 
@@ -331,13 +403,16 @@ The distilled student does not reproduce the full capabilities of the LLM, but i
 
 In this project a complete apprentice model pipeline was implemented and evaluated for toxic comment classification.
 The results show that a compact BERT-tiny student can be adapted to imitate an LLM teacher on a narrow NLP task.
+On the natural distribution original-label experiment, the classical TF-IDF and Logistic Regression baseline reached an F1 score of 0.4061 on the test split at the default threshold.
+The finetuned BERT-base supervised teacher reached an F1 score of 0.6199 on the same test split.
+This confirms that contextual Transformer representations provide a high improvement over the classical sparse vector baseline for this imbalanced toxicity task.
 The final distilled model achieved an F1 score of 0.6962 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
 At the same time, the distilled model did not improve performance against the original dataset labels compared with the supervised BERT-tiny baseline.
-Because the teacher applies a different and stricter interpretation of toxicity, so optimizing for teacher imitation naturally changes the evaluation behaviour.
+Because the teacher applies a different and stricter interpretation of toxicity, optimizing for teacher imitation naturally changes the evaluation behaviour.
 
 The experiments also highlight important tradeoffs.
 The TF-IDF baseline is extremely efficient and interpretable, but weaker in F1 score.
-BERT-tiny provides better classification quality, but is significantly larger and slower.
+BERT-tiny and BERT-base provide better classification quality, but are significantly larger and slower.
 The OpenAI teacher, on the other hand, is powerful and can provide labels, confidence scores, and short explanations.
 But it is accessed through a remote API and is expensive and slow to query repeatedly.
 In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.5578 ms per example.
@@ -346,16 +421,18 @@ Distillation does not change model size or speed because the architecture remain
 This supports the idea that knowledge distillation can be used not only for compression, but also for task specific behavioural adaptation.
 
 There are several limitations.
-First, the project uses hard label distillation, not aclassical soft label distillation with temperature and KL-divergence.
+First, the project uses hard label distillation, not a classical soft label distillation with temperature and KL-divergence.
 This loses information contained in the teacher's probability distribution.
 Second, the OpenAI teacher is not an objective ground truth and may be sensitive to prompt wording.
 Third, the final teacher labeled dataset is smaller than the original supervised training set because API labeling has cost and time constraints.
-Finally, the distilled student slightly overpredicts the toxic class compared with the teacher.
-It shows that threshold tuning or soft label training could improve calibration.
+Finally, the validation threshold tuning experiments did not improve test F1 for either TF-IDF or BERT-base.
+This means that threshold calibration should be interpreted carefully.
+The distilled student also slightly overpredicts the toxic class compared with the teacher.
+It shows that soft label training could improve calibration.
 
 Future work could extend the project in several directions.
 The most direct extension is soft label distillation using teacher probabilities and a KL-divergence loss.
-Another extension is threshold calibration on the validation set to better match the teacher's label distribution.
+Another extension is to distil the BERT-base teacher logits exported from the natural-distribution experiment into BERT-tiny.
 Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
 Or include explanation based distillation.
 Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
