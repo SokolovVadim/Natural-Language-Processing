@@ -27,9 +27,9 @@ The goal is to investigate if a compact student model can imitate the decision b
 The selected task is toxic comment classification. 
 The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT-base teacher trained on original dataset labels, a supervised BERT tiny student model.
 An LLM OpenAI teacher was used to relabel a controlled subset of examples. 
-On the natural distribution test split, the TF-IDF baseline got an F1 score of 0.4061 at the default threshold of 0.5, while the supervised BERT-base teacher obtains an F1 score of 0.6199.
+On the natural distribution test split, the TF-IDF baseline got an F1 score of 0.406 at the default threshold of 0.5, while the supervised BERT-base teacher obtains an F1 score of 0.62.
 Based on validation performance, the thresholds of 0.52 were selected for TF-IDF and 0.49 for BERT-base, but did not improve test F1 in either case.
-The final distilled student achieves an F1 score of 0.6962 against teacher labels. It shows partial imitation of the teacher's decision boundary.
+The final distilled student achieves an F1 score of 0.696 against teacher labels. It shows partial imitation of the teacher's decision boundary.
 The OpenAI teacher is much slower to query in the measured labelling pipeline, while the distilled student provides a compact local approximation for the selected toxicity classification task.}
 
 \keywords{Natural Language Processing, Knowledge Distillation, Toxicity Detection, BERT, TF-IDF, Large Language Models, GPT}
@@ -198,21 +198,21 @@ Table~\ref{tab:natural-baselines} shows the test results on the 3,000 example na
 \toprule
 Model & Threshold & Accuracy & Precision & Recall & F1 \\
 \midrule
-TF-IDF + Logistic Regression & 0.50 & 0.8967 & 0.3719 & 0.4473 & 0.4061 \\
-TF-IDF + Logistic Regression & 0.52 & 0.9020 & 0.3874 & 0.4135 & 0.4000 \\
-BERT-base supervised teacher & 0.50 & 0.9313 & 0.5508 & 0.7089 & 0.6199 \\
-BERT-base supervised teacher & 0.49 & 0.9303 & 0.5452 & 0.7131 & 0.6179 \\
+TF-IDF + Logistic Regression & 0.50 & 0.8967 & 0.3719 & 0.4473 & 0.406 \\
+TF-IDF + Logistic Regression & 0.52 & 0.9020 & 0.3874 & 0.4135 & 0.400 \\
+BERT-base supervised teacher & 0.50 & 0.9313 & 0.5508 & 0.7089 & 0.620 \\
+BERT-base supervised teacher & 0.49 & 0.9303 & 0.5452 & 0.7131 & 0.618 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The BERT-base supervised teacher substantially improves over the TF-IDF baseline on the natural test split.
-At the default threshold, BERT-base reaches an F1 score of 0.6199, compared with 0.4061 for TF-IDF.
+At the default threshold, BERT-base reaches an F1 score of 0.62, compared with 0.4061 for TF-IDF.
 The improvement comes mainly from much higher recall on the toxic class.
 The TF-IDF model detects 106 of 237 toxic test examples at threshold 0.5, while BERT-base detects 168 of 237.
 The validation-selected thresholds are close to 0.5 for both models.
 For TF-IDF, validation tuning selected 0.52, improving validation F1 from 0.4348 to 0.4444, but test F1 decreased slightly from 0.4061 to 0.4000.
-For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.6154 to 0.6271, but test F1 changed only slightly from 0.6199 to 0.6179.
+For BERT-base, validation tuning selected 0.49, improving validation F1 from 0.6154 to 0.6271, but test F1 changed only slightly from 0.62 to 0.618.
 Therefore, the default threshold remains a strong operating point for the test set, while the validation tuning results are still useful for calibration analysis.
 
 The default-threshold test confusion matrix for the TF-IDF baseline is
@@ -261,8 +261,8 @@ Epoch & Train loss & Validation loss & Validation accuracy & Validation F1 \\
 \toprule
 Model & Threshold & Val. F1 & Test F1 0.5 & Test F1 tuned \\
 \midrule
-TF-IDF + Logistic Regression & 0.52 & 0.4444 & 0.4061 & 0.4000 \\
-BERT-base supervised teacher & 0.49 & 0.6271 & 0.6199 & 0.6179 \\
+TF-IDF + Logistic Regression & 0.52 & 0.4444 & 0.406 & 0.400 \\
+BERT-base supervised teacher & 0.49 & 0.6271 & 0.620 & 0.618 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -325,14 +325,14 @@ Second, against original labels, that measures compatibility with the original d
 \toprule
 Split & Evaluation target & Accuracy & F1 \\
 \midrule
-Validation & Teacher labels & 0.7433 & 0.7586 \\
-Test & Teacher labels & 0.7033 & 0.6962 \\
-Test & Original labels & 0.7067 & 0.6480 \\
+Validation & Teacher labels & 0.743 & 0.759 \\
+Test & Teacher labels & 0.703 & 0.696 \\
+Test & Original labels & 0.707 & 0.648 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The distilled student reaches an F1 score of 0.6962 against the teacher on the final test subset.
+The distilled student reaches an F1 score of 0.696 against the teacher on the final test subset.
 This indicates that the compact model partially reaches the teacher's decision boundary.
 Against the original labels on the teacher-labelled test subset, its F1 score is 0.6480.
 This is close to the supervised BERT-tiny result of 0.6582 obtained on the larger 1000-example original-label test split.
@@ -403,10 +403,10 @@ The distilled student does not reproduce the full capabilities of the LLM, but i
 
 In this project a complete apprentice model pipeline was implemented and evaluated for toxic comment classification.
 The results show that a compact BERT-tiny student can be adapted to imitate an LLM teacher on a narrow NLP task.
-On the natural distribution original-label experiment, the classical TF-IDF and Logistic Regression baseline reached an F1 score of 0.4061 on the test split at the default threshold.
-The finetuned BERT-base supervised teacher reached an F1 score of 0.6199 on the same test split.
+On the natural distribution original-label experiment, the classical TF-IDF and Logistic Regression baseline reached an F1 score of 0.406 on the test split at the default threshold.
+The finetuned BERT-base supervised teacher reached an F1 score of 0.62 on the same test split.
 This confirms that contextual Transformer representations provide a high improvement over the classical sparse vector baseline for this imbalanced toxicity task.
-The final distilled model achieved an F1 score of 0.6962 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
+The final distilled model achieved an F1 score of 0.696 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
 At the same time, the distilled model did not improve performance against the original dataset labels compared with the supervised BERT-tiny baseline.
 Because the teacher applies a different and stricter interpretation of toxicity, optimizing for teacher imitation naturally changes the evaluation behaviour.
 
