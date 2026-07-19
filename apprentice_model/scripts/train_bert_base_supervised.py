@@ -23,7 +23,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config import load_config
 from src.data.torch_dataset import TextClassificationDataset
+from src.evaluation.threshold_tuning import (
+    compute_threshold_metrics,
+    predictions_from_threshold,
+    select_best_threshold,
+    sweep_thresholds,
+)
 from src.training.train_student import set_seed
+
+
+DEFAULT_THRESHOLD = 0.5
 
 
 def cuda_is_available() -> bool:
@@ -229,20 +238,29 @@ def build_predictions_dataframe(
     eval_result: dict,
     text_column: str,
     label_column: str,
+    tuned_threshold: float,
 ) -> pd.DataFrame:
     """Build final test predictions dataframe."""
     logits = eval_result["logits"]
     probabilities = eval_result["probabilities"]
+    prob_1 = [row[1] for row in probabilities]
 
     return pd.DataFrame(
         {
             "text": dataframe[text_column],
             "true_label": dataframe[label_column],
-            "pred_label": eval_result["predictions"],
+            "pred_label_default_threshold": predictions_from_threshold(
+                prob_1,
+                DEFAULT_THRESHOLD,
+            ),
             "prob_0": [row[0] for row in probabilities],
-            "prob_1": [row[1] for row in probabilities],
+            "prob_1": prob_1,
             "logit_0": [row[0] for row in logits],
             "logit_1": [row[1] for row in logits],
+            "pred_label_tuned_threshold": predictions_from_threshold(
+                prob_1,
+                tuned_threshold,
+            ),
         }
     )
 
@@ -252,10 +270,12 @@ def build_teacher_logits_dataframe(
     eval_result: dict,
     text_column: str,
     label_column: str,
+    tuned_threshold: float,
 ) -> pd.DataFrame:
     """Build teacher logits/probabilities dataframe for one split."""
     logits = eval_result["logits"]
     probabilities = eval_result["probabilities"]
+    prob_1 = [row[1] for row in probabilities]
 
     return pd.DataFrame(
         {
@@ -264,10 +284,37 @@ def build_teacher_logits_dataframe(
             "teacher_logit_0": [row[0] for row in logits],
             "teacher_logit_1": [row[1] for row in logits],
             "teacher_prob_0": [row[0] for row in probabilities],
-            "teacher_prob_1": [row[1] for row in probabilities],
-            "teacher_pred": eval_result["predictions"],
+            "teacher_prob_1": prob_1,
+            "teacher_pred_default_threshold": predictions_from_threshold(
+                prob_1,
+                DEFAULT_THRESHOLD,
+            ),
+            "teacher_pred_tuned_threshold": predictions_from_threshold(
+                prob_1,
+                tuned_threshold,
+            ),
         }
     )
+
+
+def normalize_metrics(metrics: dict) -> dict:
+    """Convert metric values into JSON-safe Python values."""
+    normalized = {}
+    for key, value in metrics.items():
+        if key == "confusion_matrix":
+            normalized[key] = [
+                [int(item) for item in row]
+                for row in value
+            ]
+        elif key in {"tn", "fp", "fn", "tp"}:
+            normalized[key] = int(value)
+        elif key == "threshold":
+            normalized[key] = float(value)
+        elif hasattr(value, "item"):
+            normalized[key] = value.item()
+        else:
+            normalized[key] = value
+    return normalized
 
 
 def is_cuda_oom(error: RuntimeError) -> bool:
@@ -373,6 +420,7 @@ def run_training(config: dict, batch_size: int) -> dict:
 
     history_rows: list[dict] = []
     best_validation_f1 = -1.0
+    best_epoch = 0
     best_state_dict = copy.deepcopy(model.state_dict())
     epochs_without_improvement = 0
 
@@ -412,6 +460,7 @@ def run_training(config: dict, batch_size: int) -> dict:
 
         if validation_metrics["f1"] > best_validation_f1:
             best_validation_f1 = validation_metrics["f1"]
+            best_epoch = epoch
             best_state_dict = copy.deepcopy(model.state_dict())
             epochs_without_improvement = 0
         else:
@@ -431,22 +480,78 @@ def run_training(config: dict, batch_size: int) -> dict:
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
+    final_validation_result = evaluate_model_weighted(
+        model=model,
+        data_loader=validation_loader,
+        loss_fn=loss_fn,
+        device=device,
+    )
     final_test_result = evaluate_model_weighted(
         model=model,
         data_loader=test_loader,
         loss_fn=loss_fn,
         device=device,
     )
-    metrics_path = PROJECT_ROOT / "results" / "bert_base_supervised_metrics.json"
-    with metrics_path.open("w", encoding="utf-8") as file:
-        json.dump(final_test_result["metrics"], file, indent=2)
+    validation_prob_1 = [
+        row[1] for row in final_validation_result["probabilities"]
+    ]
+    test_prob_1 = [
+        row[1] for row in final_test_result["probabilities"]
+    ]
+    threshold_sweep = sweep_thresholds(
+        y_true=final_validation_result["labels"],
+        prob_1=validation_prob_1,
+        start=0.05,
+        stop=0.95,
+        step=0.01,
+    )
+    threshold_sweep_path = PROJECT_ROOT / "results" / "bert_base_supervised_threshold_sweep.csv"
+    threshold_sweep.to_csv(threshold_sweep_path, index=False)
+    tuned_threshold, tuned_validation_metrics = select_best_threshold(threshold_sweep)
+    default_test_metrics = compute_threshold_metrics(
+        y_true=final_test_result["labels"],
+        prob_1=test_prob_1,
+        threshold=DEFAULT_THRESHOLD,
+    )
+    tuned_test_metrics = compute_threshold_metrics(
+        y_true=final_test_result["labels"],
+        prob_1=test_prob_1,
+        threshold=tuned_threshold,
+    )
 
+    metrics_path = PROJECT_ROOT / "results" / "bert_base_supervised_metrics.json"
+    metrics_payload = {
+        "best_epoch": best_epoch,
+        "best_validation_f1": best_validation_f1,
+        "best_checkpoint_path": str(
+            (output_dir / "checkpoints" / f"epoch_{best_epoch}").relative_to(PROJECT_ROOT)
+        ),
+        "default_threshold": DEFAULT_THRESHOLD,
+        "default_threshold_test_metrics": normalize_metrics(default_test_metrics),
+        "best_validation_threshold": tuned_threshold,
+        "best_validation_threshold_metrics": normalize_metrics(tuned_validation_metrics),
+        "tuned_threshold_test_metrics": normalize_metrics(tuned_test_metrics),
+    }
+    with metrics_path.open("w", encoding="utf-8") as file:
+        json.dump(metrics_payload, file, indent=2)
+
+    validation_predictions_path = (
+        PROJECT_ROOT / "results" / "bert_base_supervised_validation_predictions.csv"
+    )
+    build_predictions_dataframe(
+        dataframe=validation_df,
+        eval_result=final_validation_result,
+        text_column=text_column,
+        label_column=label_column,
+        tuned_threshold=tuned_threshold,
+    ).to_csv(validation_predictions_path, index=False)
     predictions_path = PROJECT_ROOT / "results" / "bert_base_supervised_predictions.csv"
     build_predictions_dataframe(
         dataframe=test_df,
         eval_result=final_test_result,
         text_column=text_column,
         label_column=label_column,
+        tuned_threshold=tuned_threshold,
     ).to_csv(predictions_path, index=False)
 
     split_eval_items = {
@@ -467,19 +572,25 @@ def run_training(config: dict, batch_size: int) -> dict:
             eval_result=split_result,
             text_column=text_column,
             label_column=label_column,
+            tuned_threshold=tuned_threshold,
         ).to_csv(logits_path, index=False)
 
     print("\nBERT-base supervised teacher test metrics:")
-    print(f"  accuracy:  {final_test_result['metrics']['accuracy']:.4f}")
-    print(f"  precision: {final_test_result['metrics']['precision']:.4f}")
-    print(f"  recall:    {final_test_result['metrics']['recall']:.4f}")
-    print(f"  f1:        {final_test_result['metrics']['f1']:.4f}")
+    print(f"  default threshold: {DEFAULT_THRESHOLD:.2f}")
+    print(f"  tuned threshold:   {tuned_threshold:.2f}")
+    print(f"  accuracy:          {tuned_test_metrics['accuracy']:.4f}")
+    print(f"  precision:         {tuned_test_metrics['precision']:.4f}")
+    print(f"  recall:            {tuned_test_metrics['recall']:.4f}")
+    print(f"  f1:                {tuned_test_metrics['f1']:.4f}")
     print(f"\nSaved best model to {output_dir}")
+    print(f"Best epoch: {best_epoch}")
     print(f"Saved metrics to {metrics_path}")
+    print(f"Saved threshold sweep to {threshold_sweep_path}")
+    print(f"Saved validation predictions to {validation_predictions_path}")
     print(f"Saved predictions to {predictions_path}")
     print(f"Saved teacher logits to {teacher_logits_dir}")
 
-    return final_test_result["metrics"]
+    return metrics_payload
 
 
 def main() -> None:
