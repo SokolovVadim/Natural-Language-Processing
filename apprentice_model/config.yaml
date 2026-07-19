@@ -26,6 +26,25 @@ natural_splits:
   summary_path: results/natural_split_summary.json
   seed: 12345
 
+bert_base_supervised:
+  model_name: bert-base-uncased
+  train_csv: data/processed_natural/train.csv
+  validation_csv: data/processed_natural/validation.csv
+  test_csv: data/processed_natural/test.csv
+  text_column: text
+  label_column: label
+  output_dir: results/bert_base_supervised
+  teacher_logits_dir: data/teacher_logits
+  max_length: 256
+  batch_size: 8
+  fallback_batch_size: 4
+  learning_rate: 0.00002
+  weight_decay: 0.01
+  max_epochs: 5
+  early_stopping_patience: 2
+  device: mps
+  seed: 12345
+
 student_baseline:
   model_name: prajjwal1/bert-tiny
   max_length: 128

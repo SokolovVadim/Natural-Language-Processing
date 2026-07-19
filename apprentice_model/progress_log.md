@@ -587,13 +587,9 @@ SO it confirms that the two fixes worked:
 1. using larger teacher labeled data
 2. initializing from the supervised BERT-tiny checkpoint
 
-
-
-
 # September project
 
 ## Update the dataset split
-
 
 python3 scripts/prepare_natural_splits.py  ✔  1097  16:18:04
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
@@ -630,3 +626,17 @@ test distribution:
   saved to: /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/test.csv
 
 Saved natural split summary to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/natural_split_summary.json
+
+
+## Tune bert base supervised
+
+
+ERT-base threshold tuning complete.
+  best epoch: 3
+  final model matches best checkpoint: True
+  best validation threshold: 0.49
+  validation F1 at tuned threshold: 0.6271
+  test F1 at default threshold: 0.6199
+  test F1 at tuned threshold: 0.6179
+  saved threshold sweep to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/bert_base_supervised_threshold_sweep.csv
+  updated metrics at /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/bert_base_supervised_metrics.json
