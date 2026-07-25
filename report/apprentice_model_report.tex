@@ -141,6 +141,8 @@ The main original-label experiments use natural distribution stratified splits.
 The training and validation splits are sampled from the original Hugging Face training split, while the test split is sampled from the original Hugging Face test split.
 The resulting splits preserve the natural class imbalance as closely as possible: 10,000 training examples, 2,000 validation examples, and 3,000 test examples.
 The toxic class represents 8\% of the train and validation splits and 7.90\% of the test split, as shown in Table~\ref{tab:natural-splits}.
+This natural stratified split is the main evaluation setting.
+The earlier 70/30 not-toxic/toxic split is kept as a controlled diagnostic setup, but it is no longer used as the main final evaluation split.
 For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
 Their distributions are reported in Table~\ref{tab:teacher-agreement}.
 
@@ -202,9 +204,9 @@ Table~\ref{tab:natural-baselines} shows the main comparable test results at the 
 \toprule
 Model & Accuracy & Precision & Recall & F1 & TN & FP & FN & TP \\
 \midrule
-TF-IDF + Logistic Regression & 0.897 & 0.372 & 0.447 & 0.406 & 2584 & 179 & 131 & 106 \\
-BERT-tiny supervised & 0.886 & 0.384 & 0.730 & 0.504 & 2486 & 277 & 64 & 173 \\
-BERT-base supervised teacher & 0.931 & 0.551 & 0.709 & 0.620 & 2626 & 137 & 69 & 168 \\
+TF-IDF + Logistic Regression & 0.8967 & 0.3719 & 0.4473 & 0.4061 & 2584 & 179 & 131 & 106 \\
+BERT-tiny supervised & 0.8863 & 0.3844 & 0.7300 & 0.5036 & 2486 & 277 & 64 & 173 \\
+BERT-base supervised teacher & 0.9313 & 0.5508 & 0.7089 & 0.6199 & 2626 & 137 & 69 & 168 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -276,6 +278,7 @@ Model & Tuned threshold & Test F1 at 0.50 & Test F1 tuned \\
 TF-IDF + Logistic Regression & 0.52 & 0.406 & 0.400 \\
 BERT-tiny supervised & 0.75 & 0.504 & 0.543 \\
 BERT-base supervised teacher & 0.49 & 0.620 & 0.618 \\
+BERT-tiny distilled, $T=2$, $\alpha=0.7$ & 0.75 & 0.565 & 0.559 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -285,6 +288,10 @@ Threshold tuning decreases test F1 for TF-IDF and BERT-base, but improves BERT-t
 This is consistent with the default threshold behaviour of BERT-tiny.
 Raising the threshold reduces false positives and improves its test F1.
 For the main comparison, however, Table~\ref{tab:natural-baselines} keeps the default threshold fixed at 0.50 for all models.
+For the soft label distilled BERT-tiny model, validation tuning selected threshold 0.75.
+It is corresponding to the tuned test F1 of 0.5590.
+The default threshold test F1 was 0.5649.
+Therefore, the default threshold 0.50 remains the main comparable result for the distilled model as well.
 
 \subsection{Teacher labelling analysis}
 
@@ -365,11 +372,57 @@ The distilled model predicts 140 non-toxic and 160 toxic examples.
 Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
 But it slightly overpredicts the toxic class compared with the teacher.
 
+I implemented soft label temperature distillation from the local BERT-base teacher into BERT-tiny on the natural stratified split.
+In this experiment, the teacher is the finetuned BERT-base model.
+The student is \texttt{prajjwal1/bert-tiny}, the temperature is $T=2.0$, and $\alpha=0.7$.
+The loss is
+\begin{equation}
+    \mathcal{L}
+    =
+    (1-\alpha)\,\mathcal{L}_{CE}
+    +
+    \alpha T^2\,\mathcal{L}_{KL}.
+\end{equation}
+At the default threshold of 0.50, the soft label distilled BERT-tiny model reaches test F1 0.565 on the natural split.
+This improves over the supervised BERT-tiny baseline by 0.061 F1.
+It also recovers 52.65\% of the F1 difference between supervised BERT-tiny and BERT-base.
+If we compare the BERT-base teacher's hard predictions with soft labels, the distilled student got test F1 0.679 and agreement 0.928.
+The main effect is that distillation reduces false positives compared with supervised BERT-tiny.
+And it preserves similar recall.
+
 \subsection{Efficiency benchmark}
 
 Efficiency was measured on CPU using the test split.
 The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
 Results are shown in Table~\ref{tab:benchmark}.
+
+For the natural split comparison, I also benchmarked all final models on CPU over the same 3,000 test examples with one repeat.
+For Transformer models, the main comparison uses batch size 16 and maximum sequence length 256.
+The results are shown in Table~\ref{tab:september-cpu-benchmark}.
+
+\begin{table}[htbp]
+\caption{CPU benchmark on the natural distribution test split using batch size 16 for Transformer models.}
+\label{tab:september-cpu-benchmark}
+\centering
+\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+Model & F1 & Size (MB) & ms/example & Examples/sec \\
+\midrule
+TF-IDF + LR & 0.4061 & 0.89 & 0.1333 & 7499.06 \\
+BERT-tiny supervised & 0.5036 & 17.42 & 5.2392 & 190.87 \\
+BERT-tiny distilled & 0.5649 & 17.42 & 5.4296 & 184.18 \\
+BERT-base teacher & 0.6199 & 418.35 & 288.4259 & 3.47 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+BERT-base gives the best F1, but it is much larger and slower than the compact models.
+The soft label distilled BERT-tiny improves over supervised BERT-tiny while keeping the same compact model size and similar inference speed.
+Compared with BERT-base, distilled BERT-tiny is about 24 times smaller and about 53 times faster on CPU at batch size 16.
+This shows how the distillation can be useful.
+It is a better compact model with much lower inference cost than the teacher.
+The exact speed numbers are hardware-dependent.
 
 \begin{table}[htbp]
 \caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
@@ -455,6 +508,7 @@ Another extension is to distil the BERT-base teacher logits exported from the na
 Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
 Or include explanation based distillation.
 Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
+The CPU efficiency benchmark and model size comparison for the BERT-base to BERT-tiny soft label distillation experiment should mainly be interpreted as a relative comparison between models under the same setup.
 
 \begin{thebibliography}{9}
 
