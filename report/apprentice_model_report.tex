@@ -396,6 +396,34 @@ Efficiency was measured on CPU using the test split.
 The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
 Results are shown in Table~\ref{tab:benchmark}.
 
+For the natural split comparison, I also benchmarked all final models on CPU over the same 3,000 test examples with one repeat.
+For Transformer models, the main comparison uses batch size 16 and maximum sequence length 256.
+The results are shown in Table~\ref{tab:september-cpu-benchmark}.
+
+\begin{table}[htbp]
+\caption{CPU benchmark on the natural distribution test split using batch size 16 for Transformer models.}
+\label{tab:september-cpu-benchmark}
+\centering
+\scriptsize
+\begin{tabular}{lrrrr}
+\toprule
+Model & F1 & Size (MB) & ms/example & Examples/sec \\
+\midrule
+TF-IDF + LR & 0.4061 & 0.89 & 0.1333 & 7499.06 \\
+BERT-tiny supervised & 0.5036 & 17.42 & 5.2392 & 190.87 \\
+BERT-tiny distilled & 0.5649 & 17.42 & 5.4296 & 184.18 \\
+BERT-base teacher & 0.6199 & 418.35 & 288.4259 & 3.47 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+BERT-base gives the best F1, but it is much larger and slower than the compact models.
+The soft label distilled BERT-tiny improves over supervised BERT-tiny while keeping the same compact model size and similar inference speed.
+Compared with BERT-base, distilled BERT-tiny is about 24 times smaller and about 53 times faster on CPU at batch size 16.
+This shows how the distillation can be useful.
+It is a better compact model with much lower inference cost than the teacher.
+The exact speed numbers are hardware-dependent.
+
 \begin{table}[htbp]
 \caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
 \centering
@@ -480,7 +508,7 @@ Another extension is to distil the BERT-base teacher logits exported from the na
 Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
 Or include explanation based distillation.
 Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
-TODO: A CPU efficiency benchmark and model size comparison BERT-base to BERT-tiny soft-label distillation experiment.
+The CPU efficiency benchmark and model size comparison for the BERT-base to BERT-tiny soft label distillation experiment should mainly be interpreted as a relative comparison between models under the same setup.
 
 \begin{thebibliography}{9}
 

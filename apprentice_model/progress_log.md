@@ -671,19 +671,19 @@ Notes:
 
 ### Training distilled
 
-python scripts/train_bert_tiny_distilled.py 
-  --train_logits_csv data/teacher_logits/bert_base_train_logits.csv 
-  --val_logits_csv data/teacher_logits/bert_base_validation_logits.csv 
-  --test_logits_csv data/teacher_logits/bert_base_test_logits.csv 
-  --student_model_name prajjwal1/bert-tiny 
-  --output_dir results/bert_tiny_distilled_t2_a07_natural 
-  --temperature 2.0 
-  --alpha 0.7 
-  --max_length 256 
-  --batch_size 16 
-  --learning_rate 2e-5 
-  --weight_decay 0.01 
-  --epochs 5 
+python scripts/train_bert_tiny_distilled.py
+  --train_logits_csv data/teacher_logits/bert_base_train_logits.csv
+  --val_logits_csv data/teacher_logits/bert_base_validation_logits.csv
+  --test_logits_csv data/teacher_logits/bert_base_test_logits.csv
+  --student_model_name prajjwal1/bert-tiny
+  --output_dir results/bert_tiny_distilled_t2_a07_natural
+  --temperature 2.0
+  --alpha 0.7
+  --max_length 256
+  --batch_size 16
+  --learning_rate 2e-5
+  --weight_decay 0.01
+  --epochs 5
   --patience 2
 Training BERT-tiny with BERT-base soft-label distillation...
   student model: prajjwal1/bert-tiny
@@ -743,3 +743,88 @@ Saved metrics to /home/vadim/Github/Natural-Language-Processing/apprentice_model
 Saved validation predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/bert_tiny_distilled_t2_a07_natural_validation_predictions.csv
 Saved test predictions to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/bert_tiny_distilled_t2_a07_natural_predictions.csv
 Saved training history to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/bert_tiny_distilled_t2_a07_natural/training_history.csv
+
+## Distilled model benchmark
+
+
+
+python scripts/benchmark_natural_models_cpu.py 
+  --num_repeats 1 
+  --batch_sizes 1 16
+Loaded 3000 benchmark examples from /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/test.csv
+Running on CPU only.
+Benchmarking TF-IDF + Logistic Regression on CPU...
+Benchmarking BERT-tiny supervised on CPU with batch_size=1...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 2925.79it/s]
+Benchmarking BERT-tiny supervised on CPU with batch_size=16...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 4033.36it/s]
+Benchmarking BERT-tiny distilled T=2 alpha=0.7 on CPU with batch_size=1...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 3864.76it/s]
+Benchmarking BERT-tiny distilled T=2 alpha=0.7 on CPU with batch_size=16...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 2739.24it/s]
+Benchmarking BERT-base teacher on CPU with batch_size=1...
+Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 201/201 [00:00<00:00, 4039.88it/s]
+Benchmarking BERT-base teacher on CPU with batch_size=16...
+Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 201/201 [00:00<00:00, 3305.79it/s]
+
+CPU benchmark results:
+
+TF-IDF + Logistic Regression (batch_size=all)
+  F1 used for comparison: 0.4061
+  deployable model size: 0.89 MB
+  examples: 3000
+  avg total inference time: 0.4000 sec
+  avg time/example: 0.1333 ms
+  examples/sec: 7499.06
+
+BERT-tiny supervised (batch_size=1)
+  F1 used for comparison: 0.5036
+  deployable model size: 17.42 MB
+  examples: 3000
+  avg total inference time: 27.8546 sec
+  avg time/example: 9.2849 ms
+  examples/sec: 107.70
+
+BERT-tiny supervised (batch_size=16)
+  F1 used for comparison: 0.5036
+  deployable model size: 17.42 MB
+  examples: 3000
+  avg total inference time: 15.7176 sec
+  avg time/example: 5.2392 ms
+  examples/sec: 190.87
+
+BERT-tiny distilled T=2 alpha=0.7 (batch_size=1)
+  F1 used for comparison: 0.5649
+  deployable model size: 17.42 MB
+  examples: 3000
+  avg total inference time: 27.0160 sec
+  avg time/example: 9.0053 ms
+  examples/sec: 111.05
+
+BERT-tiny distilled T=2 alpha=0.7 (batch_size=16)
+  F1 used for comparison: 0.5649
+  deployable model size: 17.42 MB
+  examples: 3000
+  avg total inference time: 16.2887 sec
+  avg time/example: 5.4296 ms
+  examples/sec: 184.18
+
+BERT-base teacher (batch_size=1)
+  F1 used for comparison: 0.6199
+  deployable model size: 418.35 MB
+  examples: 3000
+  avg total inference time: 1251.2715 sec
+  avg time/example: 417.0905 ms
+  examples/sec: 2.40
+
+BERT-base teacher (batch_size=16)
+  F1 used for comparison: 0.6199
+  deployable model size: 418.35 MB
+  examples: 3000
+  avg total inference time: 865.2777 sec
+  avg time/example: 288.4259 ms
+  examples/sec: 3.47
+
+Saved JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.json
+Saved CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.csv
+Saved Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.md
