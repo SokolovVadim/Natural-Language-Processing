@@ -827,9 +827,7 @@ Saved JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/re
 Saved CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.csv
 Saved Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.md
 
-
 ## Error analysis
-
 
 distillation_fixed_supervised_fp: 99
 distillation_fixed_supervised_fn: 11
@@ -841,3 +839,15 @@ teacher_student_disagreement: 217
 all_correct: 2562
 teacher_correct_distilled_wrong: 138
 distilled_correct_teacher_wrong: 79
+
+## Saliency
+
+
+python scripts/create_saliency_examples.py                  ✔  1090  13:11:00
+Loading BERT-tiny supervised...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 7479.08it/s]
+Loading BERT-tiny distilled T=2 alpha=0.7...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 7118.70it/s]
+Saved saliency CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.csv
+Saved saliency Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.md
+Saved saliency JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.json

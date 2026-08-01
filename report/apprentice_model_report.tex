@@ -422,6 +422,33 @@ Still FN & Two-timer. Cad. & 1 & 0 & 0 & 0 & Very short toxic-labeled phrase is 
 \end{tabular}
 \end{table}
 
+\subsection{Token saliency examples}
+
+For the quality validation i computed the saliency scores.
+For each token, I measure how strongly the toxic class score depends on that token’s embedding.
+Tokens with higher scores are treated as more influential for the toxic prediction.
+The scores are normalized per example and model, so they are illustrative only.
+Tokens with high score should be interpreted as tokens with high saliency for the toxic class score.
+Table~\ref{tab:saliency-examples} shows four compact examples.
+
+\begin{table}[htbp]
+\caption{Qualitative token saliency examples for supervised and distilled BERT-tiny.}
+\label{tab:saliency-examples}
+\centering
+\tiny
+\setlength{\tabcolsep}{1pt}
+\begin{tabular}{p{0.45cm}p{1.25cm}p{0.35cm}p{0.55cm}p{0.55cm}p{2.2cm}p{2.2cm}p{2.2cm}}
+\toprule
+Row & Case & Y & Sup. & Dist. & Sup. tokens & Dist. tokens & Short note \\
+\midrule
+67 & Fixed FP & 0 & 0.791 & 0.259 & racist, mentality, starts & racist, mentality, palestinian & Loaded tokens remain salient; distilled probability is lower. \\
+79 & Fixed FP & 0 & 0.547 & 0.020 & laugh, Infowars, Breitbart & laugh, Infowars, Breitbart & Media tokens stay salient; distilled probability is lower. \\
+69 & Fixed FN & 1 & 0.331 & 0.527 & boors, unpatriotic, cretinous & unpatriotic, boors, cretinous & Distillation raises probability for insulting wording. \\
+46 & Still FP & 0 & 0.623 & 0.649 & hell, bizarreness, guy & hell, bizarreness, indefensible & Harsh political criticism remains salient. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Efficiency benchmark}
 
 Efficiency was measured on CPU using the test split.
