@@ -449,6 +449,35 @@ Row & Case & Y & Sup. & Dist. & Sup. tokens & Dist. tokens & Short note \\
 \end{tabular}
 \end{table}
 
+\subsection{Minimal pair bias check}
+
+A small minimal pair set was manually constructed.
+It was used to compare neutral identity mentions, non identity negative statements, direct insults, and identity attacks.
+This is a qualitative check, not a full fairness audit.
+The aggregate results are shown in Table~\ref{tab:minimal-pair-bias}.
+Counts show correct predictions over manually assigned expected labels.
+
+\begin{table}[htbp]
+\caption{Minimal pair qualitative check by category}
+\label{tab:minimal-pair-bias}
+\centering
+\tiny
+\begin{tabular}{lcccc}
+\toprule
+Model & Neutral ID & Negative & Insult & ID attack \\
+\midrule
+BERT-base & 5/7 & 3/3 & 3/3 & 5/5 \\
+BERT-tiny sup. & 6/7 & 3/3 & 3/3 & 5/5 \\
+BERT-tiny dist. & 6/7 & 3/3 & 3/3 & 5/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All models correctly classified the simple direct insults and identity attacks in this small set.
+However, neutral identity mentions were not always classified correctly.
+In particular, ``I am gay.'' was classified as toxic by all three models, and ``I am Muslim.'' was classified as toxic by the BERT-base teacher.
+This suggests possible sensitivity to identity terms, and distillation does not guarantee removal of teacher or dataset biases.
+
 \subsection{Efficiency benchmark}
 
 Efficiency was measured on CPU using the test split.

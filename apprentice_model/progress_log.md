@@ -842,7 +842,6 @@ distilled_correct_teacher_wrong: 79
 
 ## Saliency
 
-
 python scripts/create_saliency_examples.py                  ✔  1090  13:11:00
 Loading BERT-tiny supervised...
 Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 7479.08it/s]
@@ -851,3 +850,42 @@ Loading weights: 100%|███████████████████�
 Saved saliency CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.csv
 Saved saliency Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.md
 Saved saliency JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/saliency_examples.json
+
+
+## Bias check
+
+
+
+python scripts/run_minimal_pair_bias_check.py        ✔  1111  16:50:13
+Running minimal-pair bias check on CPU...
+Examples: 18
+Loading and evaluating BERT-base teacher...
+Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 201/201 [00:00<00:00, 7785.52it/s]
+Loading and evaluating BERT-tiny supervised...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 7464.47it/s]
+Loading and evaluating BERT-tiny distilled T=2 alpha=0.7...
+Loading weights: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 41/41 [00:00<00:00, 7405.01it/s]
+
+Aggregate accuracy by category:
+
+BERT-base teacher
+  direct_insult: 1.000 (3/3)
+  identity_attack: 1.000 (5/5)
+  neutral_identity: 0.714 (5/7)
+  non_identity_negative: 1.000 (3/3)
+
+BERT-tiny supervised
+  direct_insult: 1.000 (3/3)
+  identity_attack: 1.000 (5/5)
+  neutral_identity: 0.857 (6/7)
+  non_identity_negative: 1.000 (3/3)
+
+BERT-tiny distilled T=2 alpha=0.7
+  direct_insult: 1.000 (3/3)
+  identity_attack: 1.000 (5/5)
+  neutral_identity: 0.857 (6/7)
+  non_identity_negative: 1.000 (3/3)
+
+Saved CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/minimal_pair_bias_check.csv
+Saved Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/minimal_pair_bias_check.md
+Saved JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/minimal_pair_bias_check.json
