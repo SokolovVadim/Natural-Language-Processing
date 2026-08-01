@@ -746,10 +746,8 @@ Saved training history to /home/vadim/Github/Natural-Language-Processing/apprent
 
 ## Distilled model benchmark
 
-
-
-python scripts/benchmark_natural_models_cpu.py 
-  --num_repeats 1 
+python scripts/benchmark_natural_models_cpu.py
+  --num_repeats 1
   --batch_sizes 1 16
 Loaded 3000 benchmark examples from /home/vadim/Github/Natural-Language-Processing/apprentice_model/data/processed_natural/test.csv
 Running on CPU only.
@@ -828,3 +826,18 @@ BERT-base teacher (batch_size=16)
 Saved JSON to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.json
 Saved CSV to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.csv
 Saved Markdown to /home/vadim/Github/Natural-Language-Processing/apprentice_model/results/cpu_benchmark_comparison.md
+
+
+## Error analysis
+
+
+distillation_fixed_supervised_fp: 99
+distillation_fixed_supervised_fn: 11
+distillation_worsened_to_fp: 22
+distillation_worsened_to_fn: 12
+distilled_false_positive: 200
+distilled_false_negative: 65
+teacher_student_disagreement: 217
+all_correct: 2562
+teacher_correct_distilled_wrong: 138
+distilled_correct_teacher_wrong: 79
