@@ -390,6 +390,38 @@ If we compare the BERT-base teacher's hard predictions with soft labels, the dis
 The main effect is that distillation reduces false positives compared with supervised BERT-tiny.
 And it preserves similar recall.
 
+\subsection{Error analysis candidates}
+
+To perform manual error analysis, I compared the original label, BERT-base teacher prediction, supervised BERT-tiny prediction, and distilled BERT tiny prediction on the natural test split.
+The aggregate counts show that soft label distillation mostly improves BERT-tiny by reducing false positives.
+It fixes 99 supervised BERT-tiny false positives and adds 22 new false positives.
+So the net reduction is 77 false positives.
+False negatives stay almost unchanged.
+11 are fixed and 12 are worsened.
+This matches the confusion matrices.
+Supervised BERT-tiny has FP=277 and FN=64, and distilled BERT-tiny has FP=200 and FN=65.
+Table~\ref{tab:error-analysis-examples} shows six chosen examples for manual inspection.
+
+\begin{table}[htbp]
+\caption{Curated error-analysis examples from the natural test split.}
+\label{tab:error-analysis-examples}
+\centering
+\tiny
+\setlength{\tabcolsep}{1.5pt}
+\begin{tabular}{p{1.8cm}p{4.0cm}rrrrp{3.0cm}}
+\toprule
+Case & Text excerpt & Gold & Teacher & Sup. & Dist. & Short interpretation \\
+\midrule
+Fixed FP & It is good that the world starts to understand the racist mentality of Isr*el... & 0 & 0 & 1 & 0 & Distillation lowers toxicity probability. \\
+Fixed FP & For a laugh, try Infowars. It makes Breitbart look the venerable Times of London. & 0 & 0 & 1 & 0 & Media criticism stays non-toxic. \\
+Fixed FN & People who den*ate any American's right to protest are nothing more than cretinous boors. & 1 & 1 & 0 & 1 & Insulting wording crosses threshold. \\
+Worse FP & I would hate to be the one who had to read those letters. Prayers for all those children... & 0 & 0 & 0 & 1 & Negative text crosses threshold. \\
+Still FP & We do not have a President. The guy does not need any help tarnishing himself... & 0 & 0 & 1 & 1 & Harsh political criticism is flagged. \\
+Still FN & Two-timer. Cad. & 1 & 0 & 0 & 0 & Very short toxic-labeled phrase is missed. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Efficiency benchmark}
 
 Efficiency was measured on CPU using the test split.
