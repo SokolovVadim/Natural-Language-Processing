@@ -91,13 +91,13 @@ The resulting distillation dataset is
     \mathcal{D}_T = \{(x_i, y_i, z_T(x_i))\}_{i=1}^{N}.
 \end{equation}
 
-The student $S_{\phi}$ is a BERT-tiny classifier trained with soft label temperature distillation.
+The student $S_{\phi}$ is a BERT-tiny classifier trained with soft-label temperature distillation.
 The loss combines cross entropy against the original label with a KL-divergence term that matches the softened teacher and student distributions:
 
 \begin{equation}
-    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha \tau^2\,\mathcal{L}_{KL}(p_T^{(\tau)}, p_S^{(\tau)}),
+    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y_i, p_S(x_i)) + \alpha \tau^2\,\mathcal{L}_{KL}(p_T^{(\tau)}(x_i), p_S^{(\tau)}(x_i)),
 \end{equation}
-where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $\tau$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
+where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $p_T^{(\tau)}(x_i)=\operatorname{softmax}(z_T(x_i)/\tau)$, $p_S^{(\tau)}(x_i)=\operatorname{softmax}(z_S(x_i)/\tau)$, $\tau$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
 The final experiment uses logits from the finetuned BERT-base teacher with $\tau=2.0$ and $\alpha=0.7$.
 
 \subsection{Pipeline overview}
@@ -178,6 +178,44 @@ In addition, the range of thresholds from 0.05 to 0.95 was checked on the valida
 And the threshold with the best validation F1 was selected.
 The selected threshold was then evaluated once on the test set.
 Threshold tuning is validation based and does not use test labels for model selection.
+
+\subsection{Training dynamics and checkpoint selection}
+
+Training histories were recorded for the BERT-base teacher and the soft-label distilled BERT-tiny student.
+Figure~\ref{fig:bert-base-training-dynamics} shows that BERT-base reached its best validation F1 at epoch 3.
+After this checkpoint, training loss continued decreasing while validation loss increased, suggesting overfitting.
+Figure~\ref{fig:distilled-training-dynamics} shows that the distilled BERT-tiny model continued improving until epoch 5.
+Test metrics are reported from the best validation checkpoint for each model.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_base_learning_curve_f1.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_base_learning_curve_loss.png}
+\end{minipage}
+\caption{BERT-base teacher validation F1 and loss curves.}
+\label{fig:bert-base-training-dynamics}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_tiny_distilled_t2_a07_f1.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_tiny_distilled_t2_a07_loss.png}
+\end{minipage}
+\caption{Soft-label distilled BERT-tiny validation scores and loss curves.}
+\label{fig:distilled-training-dynamics}
+\end{figure}
 
 Table~\ref{tab:natural-baselines} shows the main comparable test results at the default threshold on the 3,000 example natural distribution test split.
 
@@ -294,7 +332,7 @@ This makes the teacher and student predictions directly comparable.
 \toprule
 Model & Accuracy & Precision & Recall & F1 & TN & FP & FN & TP \\
 \midrule
-BERT-base teacher & 0.931 & 0.551 & 0.709 & 0.619 & 263 & 137 & 69 & 168 \\
+BERT-base teacher & 0.931 & 0.551 & 0.709 & 0.619 & 2626 & 137 & 69 & 168 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -328,7 +366,7 @@ BERT-tiny distilled, $T=2$, $\alpha=0.7$ & 0.9117 & 0.4624 & 0.7257 & 0.5649 \\
 \end{tabular}
 \end{table}
 
-The main final experiment uses soft label temperature distillation from the local BERT-base teacher into BERT-tiny on the natural stratified split.
+The main final experiment uses softlabel temperature distillation from the local BERT-base teacher into BERT-tiny on the natural stratified split.
 In this experiment, the teacher is the finetuned BERT-base model.
 The student is \texttt{prajjwal1/bert-tiny}, the temperature is $T=2.0$, and $\alpha=0.7$.
 The loss is
@@ -339,7 +377,7 @@ The loss is
     +
     \alpha T^2\,\mathcal{L}_{KL}.
 \end{equation}
-At the default threshold of 0.50, the soft label distilled BERT-tiny model reaches test F1 0.565 on the natural split.
+At the default threshold of 0.50, the softlabel distilled BERT-tiny model reaches test F1 0.565 on the natural split.
 This improves over the supervised BERT-tiny baseline by 0.061 F1.
 It also recovers 52.65\% of the F1 difference between supervised BERT-tiny and BERT-base.
 Compared with the BERT-base teacher's hard predictions, the distilled student got test F1 0.679 and agreement 0.928.
@@ -349,7 +387,7 @@ And it preserves similar recall.
 \subsection{Error analysis candidates}
 
 To perform manual error analysis, I compared the original label, BERT-base teacher prediction, supervised BERT-tiny prediction, and distilled BERT tiny prediction on the natural test split.
-The aggregate counts show that soft label distillation mostly improves BERT-tiny by reducing false positives.
+The aggregate counts show that softlabel distillation mostly improves BERT-tiny by reducing false positives.
 It fixes 99 supervised BERT-tiny false positives and adds 22 new false positives.
 So the net reduction is 77 false positives.
 False negatives stay almost unchanged.
@@ -490,7 +528,7 @@ This supports the idea that knowledge distillation can be used not only for comp
 There are several limitations.
 First, the BERT-base teacher is not an objective ground truth and may transfer errors or biases to the student.
 Second, the minimal pair check suggests that all models can still be sensitive to identity terms.
-Third, only one softlabel distillation setting, $T=2.0$ and $\alpha=0.7$, is used as the accepted final run.
+Third, only one soft label distillation setting, $T=2.0$ and $\alpha=0.7$, is used as the accepted final run.
 Finally, validation threshold tuning does not always improve test F1.
 This means that threshold calibration should be interpreted carefully.
 
