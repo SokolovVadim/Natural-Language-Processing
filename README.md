@@ -1,37 +1,35 @@
-# Natural-Language-Processing
+# Natural Language Processing
 
-# P6 - The Apprentice Model
+Repository for the NLP course project **P6 - The Apprentice Model**.
 
-This repository contains the a Natural Language Processing exam project on knowledge distillation. The goal is to train a smaller student model to imitate a larger teacher model on a binary toxic comment classification task.
-
-Dataset: [`SetFit/toxic_conversations`](https://huggingface.co/datasets/SetFit/toxic_conversations)
-
-Task: binary toxic comment classification.
-
-## Installation
-
-Create and activate a virtual environment:
-
-```
-python -m venv .venv
-source .venv/bin/activate
-```
-
-Install dependencies
-
-pip install -r requirements.txt
-
-## Inspect the Dataset
-
-From the project root, run:
+The main project lives in:
 
 ```bash
-python scripts/inspect_dataset.py
+apprentice_model/
 ```
 
-This prints the available dataset splits, column names, sample examples, and label distributions when labels are present.
+Final experiment: distill a supervised `bert-base-uncased` teacher into a compact `prajjwal1/bert-tiny` student for binary toxic comment classification on `SetFit/toxic_conversations`.
 
+## Quick Start
 
-## Split dataset into train and test
+```bash
+cd apprentice_model
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-`python scripts/prepare_data.py`
+Main pipeline:
+
+```bash
+python scripts/prepare_natural_splits.py
+python scripts/train_tfidf_natural.py
+python scripts/train_bert_tiny_supervised_natural.py
+python scripts/train_bert_base_supervised.py
+python scripts/validate_teacher_logits.py
+python scripts/smoke_test_distillation_setup.py
+python scripts/train_bert_tiny_distilled.py
+python scripts/benchmark_natural_models_cpu.py --num_repeats 1 --batch_sizes 1 16
+```
+
+See [`apprentice_model/README.md`](apprentice_model/README.md) for the full script list and outputs.

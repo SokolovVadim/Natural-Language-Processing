@@ -16,7 +16,7 @@
 
 \begin{document}
 
-\title[The Apprentice Model for Toxicity Detection]{Distilling an LLM Teacher into a Compact Transformer for Toxic Comment Classification}
+\title[The Apprentice Model for Toxicity Detection]{Distilling a BERT-base Teacher into a Compact Transformer for Toxic Comment Classification}
 
 \author{\fnm{Vadim} \sur{Sokolov}}
 
@@ -25,12 +25,11 @@
 \abstract{This project studies knowledge distillation for Natural Language Processing through an ``apprentice model''. 
 The goal is to investigate if a compact student model can imitate the decision behaviour of a larger teacher model on a specific text classification task.
 The selected task is toxic comment classification. 
-The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT-base teacher trained on original dataset labels, a supervised BERT tiny student model.
-An LLM OpenAI teacher was used to relabel a controlled subset of examples. 
-On the natural distribution test split, the TF-IDF baseline got an F1 score of 0.406 at the default threshold of 0.5, while the supervised BERT-base teacher obtains an F1 score of 0.62.
-Based on validation performance, the thresholds of 0.52 were selected for TF-IDF and 0.49 for BERT-base, but did not improve test F1 in either case.
-The final distilled student achieves an F1 score of 0.696 against teacher labels. It shows partial imitation of the teacher's decision boundary.
-The OpenAI teacher is much slower to query in the measured labelling pipeline, while the distilled student provides a compact local approximation for the selected toxicity classification task.}
+The experimental pipeline compares a classical TF-IDF and Logistic Regression baseline, a supervised BERT-tiny student, a supervised BERT-base teacher trained on original dataset labels, and a BERT-tiny student distilled from BERT-base logits.
+On the natural distribution test split, the TF-IDF baseline got an F1 score of 0.406 at the default threshold of 0.5.
+The supervised BERT-base teacher obtains an F1 score of 0.620.
+The supervised BERT-tiny baseline obtains F1 0.504, and the soft-label distilled BERT-tiny model with $T=2.0$ and $\alpha=0.7$ obtains F1 0.565.
+This recovers 52.65\% of the F1 gap between supervised BERT-tiny and BERT-base while keeping the compact BERT-tiny model size and inference cost.}
 
 \keywords{Natural Language Processing, Knowledge Distillation, Toxicity Detection, BERT, TF-IDF, Large Language Models, GPT}
 
@@ -53,7 +52,7 @@ Meanwhile, a compact model can be executed locally and quickly.
 
 The project investigates if a compact Transformer model can be used as a lightweight student of a larger teacher model.
 The selected student is BERT-tiny, a small Transformer encoder.
-The teacher labelling stage uses an OpenAI LLM to classify examples and provide confidence scores.
+The final teacher is a finetuned BERT-base classifier.
 In addition, a classical TF-IDF and Logistic Regression model is used as a baseline, connecting the project to traditional vector space methods covered in the course.
 
 The relevant literature includes the original formulation of knowledge distillation by Hinton et al. \cite{hinton2015distilling}, where a student model learns from softened teacher output distributions and Transformer based language models such as BERT \cite{devlin2019bert}.
@@ -67,7 +66,7 @@ This project applies the same general motivation to a practical toxicity detecti
 The main research question is:
 
 
-To what extent can a compact Transformer model imitate a larger LLM teacher for toxic comment classification.
+To what extent can a compact Transformer model imitate a stronger BERT-base teacher for toxic comment classification.
 What are the trade offs between predictive performance, model size, and inference speed?
 
 
@@ -85,29 +84,21 @@ The supervised baseline learns a classifier
 using the original dataset labels. 
 
 
-In the teacher labelling stage, a large language model teacher $T$ assigns a new label $\tilde{y}_i \in \{0,1\}$ to each selected example of the data and confidence scores $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$. 
-The resulting teacher labelled dataset is
+For the final distillation experiment, the teacher $T$ is a finetuned BERT-base classifier.
+For each example, the teacher produces logits $z_T(x_i)$ and probabilities $p_T(y=0|x_i)$ and $p_T(y=1|x_i)$.
+The resulting distillation dataset is
 \begin{equation}
-    \mathcal{D}_T = \{(x_i, \tilde{y}_i)\}_{i=1}^{N}.
+    \mathcal{D}_T = \{(x_i, y_i, z_T(x_i))\}_{i=1}^{N}.
 \end{equation}
 
-The distilled student $S_{\phi}$ is trained to imitate the teacher labels. In this implementation, I use hard-label distillation, where the loss is standard cross-entropy computed against the teacher label:
-\begin{equation}
-    \mathcal{L}_{distill}
-    =
-    \mathcal{L}_{CE}(\tilde{y}_i, p_S(x_i)).
-\end{equation}
-
-This differs from classical soft label distillation, where the student is trained to match the full teacher probability distribution. 
-It can be implemented using a temperature scaled Kullback--Leibler divergence loss.
-A common formulation is
+The student $S_{\phi}$ is a BERT-tiny classifier trained with soft-label temperature distillation.
+The loss combines cross entropy against the original label with a KL-divergence term that matches the softened teacher and student distributions:
 
 \begin{equation}
-    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y, p_S) + \alpha \tau^2\,\mathcal{L}_{KL}(p_T^{(\tau)}, p_S^{(\tau)}),
+    \mathcal{L} = (1 - \alpha)\,\mathcal{L}_{CE}(y_i, p_S(x_i)) + \alpha \tau^2\,\mathcal{L}_{KL}(p_T^{(\tau)}(x_i), p_S^{(\tau)}(x_i)),
 \end{equation}
-where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $\tau$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
-Soft label distillation is considered as future work in this project.
-In this project the implemented experiment focuses on hard label teacher imitation.
+where $\mathcal{L}_{CE}$ is cross entropy with hard labels, $\mathcal{L}_{KL}$ is the Kullback--Leibler divergence between teacher and student probability distributions, $p_T^{(\tau)}(x_i)=\operatorname{softmax}(z_T(x_i)/\tau)$, $p_S^{(\tau)}(x_i)=\operatorname{softmax}(z_S(x_i)/\tau)$, $\tau$ is the distillation temperature, and $\alpha$ controls the trade off between the two terms.
+The final experiment uses logits from the finetuned BERT-base teacher with $\tau=2.0$ and $\alpha=0.7$.
 
 \subsection{Pipeline overview}
 
@@ -120,9 +111,7 @@ The project pipeline consists of five stages:
     A BERT-tiny model is then finetuned on the original labels as a supervised Transformer baseline.
     \item \textbf{Supervised local teacher.} A BERT-base model is finetuned on the natural distribution original labels.
     It is used to produce logits and probabilities for later soft-label distillation.
-    \item \textbf{Teacher labelling.} An OpenAI LLM teacher labels a stratified subset of examples and returns a binary label, confidence scores, and a short reason. 
-    This step produces a teacher labelled dataset for distillation.
-    \item \textbf{Distilled student.} Train a distilled BERT-tiny student on teacher labels, initialized from the supervised BERT-tiny run. 
+    \item \textbf{Distilled student.} Train a distilled BERT-tiny student from BERT-base teacher logits using soft-label temperature distillation. 
     Evaluate quality metrics and benchmark model size and inference speed.
 \end{enumerate}
 
@@ -143,11 +132,11 @@ The resulting splits preserve the natural class imbalance as closely as possible
 The toxic class represents 8\% of the train and validation splits and 7.90\% of the test split, as shown in Table~\ref{tab:natural-splits}.
 This natural stratified split is the main evaluation setting.
 The earlier 70/30 not-toxic/toxic split is kept as a controlled diagnostic setup, but it is no longer used as the main final evaluation split.
-For OpenAI teacher labeling, final deterministic teacher label splits were created from already labeled examples. 
-Their distributions are reported in Table~\ref{tab:teacher-agreement}.
+For the final distillation experiment, BERT-base teacher logits and probabilities were generated for the same natural train, validation, and test rows.
+This keeps the supervised baselines, teacher model, and distilled BERT-tiny student aligned on the same data split.
 
 \begin{table}[htbp]
-\caption{Natural-distribution stratified splits used for the main original-label experiments.}\label{tab:natural-splits}
+\caption{Natural distribution stratified splits used for the main original-label experiments.}\label{tab:natural-splits}
 \centering
 \begin{tabular}{lrrrr}
 \toprule
@@ -163,9 +152,6 @@ Test & 3000 & 2763 & 237 & 7.9 \\
 Preprocessing was intentionally minimal.
 Handled empty values, leading and trailing spaces were removed, and repeated spaces were normalised. 
 No lowercasing or punctuation removal was applied, because Transformer tokenizers are designed to process raw text.
-In the separate OpenAI teacher-labelled subset, the selected original labels follow a controlled 70\% not toxic and 30\% toxic distribution.
-The OpenAI teacher consistently assigns more examples to the toxic class than the original annotations, with a distribution closer to 55\% not toxic and 45\% toxic.
-This shows that the OpenAI teacher applies a stricter toxicity boundary, especially for hostile or aggressive comments originally labelled as not toxic.
 
 \subsection{Evaluation metrics}
 
@@ -192,6 +178,44 @@ In addition, the range of thresholds from 0.05 to 0.95 was checked on the valida
 And the threshold with the best validation F1 was selected.
 The selected threshold was then evaluated once on the test set.
 Threshold tuning is validation based and does not use test labels for model selection.
+
+\subsection{Training dynamics and checkpoint selection}
+
+Training histories were recorded for the BERT-base teacher and the soft-label distilled BERT-tiny student.
+Figure~\ref{fig:bert-base-training-dynamics} shows that BERT-base reached its best validation F1 at epoch 3.
+After this checkpoint, training loss continued decreasing while validation loss increased, suggesting overfitting.
+Figure~\ref{fig:distilled-training-dynamics} shows that the distilled BERT-tiny model continued improving until epoch 5.
+Test metrics are reported from the best validation checkpoint for each model.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_base_learning_curve_f1.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_base_learning_curve_loss.png}
+\end{minipage}
+\caption{BERT-base teacher validation F1 and loss curves.}
+\label{fig:bert-base-training-dynamics}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_tiny_distilled_t2_a07_f1.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{../apprentice_model/results/figures/bert_tiny_distilled_t2_a07_loss.png}
+\end{minipage}
+\caption{Soft-label distilled BERT-tiny validation scores and loss curves.}
+\label{fig:distilled-training-dynamics}
+\end{figure}
 
 Table~\ref{tab:natural-baselines} shows the main comparable test results at the default threshold on the 3,000 example natural distribution test split.
 
@@ -245,7 +269,7 @@ BERT-tiny reduces false negatives compared with TF-IDF, but increases false posi
 BERT-base gives the strongest overall result, reducing both false positives and false negatives compared with TF-IDF.
 This justifies using BERT-base as the teacher model for later soft-label distillation into BERT-tiny.
 The finetuned BERT-base model saved in \texttt{results/bert\_base\_supervised/} matches the best validation checkpoint, that was at epoch 3 with validation F1 equal to 0.615.
-The model logits and probabilities were exported for the train, validation, and test splits for future soft-label distillation.
+The model logits and probabilities were exported for the train, validation, and test splits and used for the soft-label distillation experiment.
 
 The BERT-base validation curve is reported in Table~\ref{tab:bert-base-history}.
 The model reaches its best validation F1 at epoch 3.
@@ -293,86 +317,56 @@ It is corresponding to the tuned test F1 of 0.5590.
 The default threshold test F1 was 0.5649.
 Therefore, the default threshold 0.50 remains the main comparable result for the distilled model as well.
 
-\subsection{Teacher labelling analysis}
+\subsection{BERT-base teacher analysis}
 
-An OpenAI LLM teacher was used to label controlled stratified subsets of the data.
-The teacher prompt defined toxicity as insults, harassment, threats, hate, severe disrespect, or abusive language.
-It also stated that comments may be negative, political, or disagreeable without necessarily being toxic.
-The teacher returned a binary label, confidence scores, and a short reason.
-On the final teacher label test split, agreement between original and teacher labels is 0.803.
-Table~\ref{tab:teacher-agreement} summarises the current teacher labelled subset.
+The final teacher model is the finetuned \texttt{bert base uncased} classifier trained on the natural distribution training split.
+It is a stronger supervised model whose logits and probabilities are used as the distillation signal for BERT-tiny.
+Teacher logits were exported for the same 10,000 training, 2,000 validation, and 3,000 test examples used in the main experiment.
+This makes the teacher and student predictions directly comparable.
 
 \begin{table}[htbp]
-\caption{Agreement between original dataset labels and OpenAI teacher labels on the final teacher-labelled splits.}
-\label{tab:teacher-agreement}
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-Split & Rows & Original 0 & Original 1 & Teacher 0 & Teacher 1 & Agreement \\
-\midrule
-Train & 1500 & 1050 & 450 & 816 & 684 & 0.763 \\
-Validation & 300 & 210 & 90 & 160 & 140 & 0.773 \\
-Test & 300 & 210 & 90 & 167 & 133 & 0.803 \\
-\botrule
-\end{tabular}
-\end{table}
-
-Two main disagreement patterns were observed:
-\begin{itemize}
-\item Original label 0, teacher label 1: comments that were originally annotated as non-toxic but contained hostile, demeaning, insulting, or identity-related language.
-\item Original label 1, teacher label 0: comments that contained sensitive, political, or negative terms, but did not necessarily contain direct harassment or abuse under the prompt definition.
-\end{itemize}
-
-The teacher agrees with the original labels on 76.27\% of the train split, 77.33\% of the validation split, and 80.33\% of the test split. 
-The teacher labels a higher proportion of examples as toxic than the original dataset.
-This suggests that the teacher uses a stricter decision boundary for hostile language.
-For example, comments originally labelled as non-toxic but containing phrases such as ``you do not have a clue'', ``vile race baiting hate propaganda'', or ``more yapping from someone who knows nothing'' were often labelled as toxic by the teacher. 
-Some comments originally labelled toxic were considered non-toxic by the teacher when they contained mild profanity or negative language without direct abuse.
-
-This confirms that the LLM teacher should not be treated as a gold standard.
-Instead, it defines a different decision boundary. 
-The distillation task is therefore best interpreted as teacher imitation, not a direct optimization of the original dataset labels.
-
-\subsection{Distilled student results}
-
-The first distillation attempt was trained from the base BERT-tiny model on a smaller teacher labeled set.
-It predicted too few toxic examples and performed poorly. 
-The final approach improved this by using more teacher labeled examples and initializing the distilled model from the supervised BERT-tiny checkpoint. 
-The resulting model was then finetuned on OpenAI teacher labels.
-
-Table~\ref{tab:distilled-results} reports the final distilled student results.
-The model is evaluated in comparison to two cases.
-First, against teacher labels that measures teacher imitation.
-Second, against original labels, that measures compatibility with the original dataset annotations.
-
-\begin{table}[htbp]
-\caption{Final distilled BERT-tiny results on the teacher labeled validation and test subsets.}\label{tab:distilled-results}
+\caption{BERT-base teacher performance on the natural test split at the default threshold 0.50.}
+\label{tab:bert-base-teacher-summary}
 \centering
-\begin{tabular}{llrr}
+\begin{tabular}{lrrrrrrrr}
 \toprule
-Split & Evaluation target & Accuracy & F1 \\
+Model & Accuracy & Precision & Recall & F1 & TN & FP & FN & TP \\
 \midrule
-Validation & Teacher labels & 0.743 & 0.759 \\
-Test & Teacher labels & 0.703 & 0.696 \\
-Test & Original labels & 0.707 & 0.648 \\
+BERT-base teacher & 0.931 & 0.551 & 0.709 & 0.619 & 2626 & 137 & 69 & 168 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The distilled student reaches an F1 score of 0.696 against the teacher on the final test subset.
-This indicates that the compact model partially reaches the teacher's decision boundary.
-Against the original labels on the teacher-labelled test subset, its F1 score is 0.648.
-This is close to the supervised BERT-tiny result of 0.658 obtained on the larger 1000-example original-label test split.
-But the two numbers are not perfectly comparable because they are computed on different test subsets.
-This is expected because the distilled student is optimized for teacher imitation, and the teacher disagrees with the original labels on approximately 20\% of the final teacher labeled test subset.
+The teacher has the strongest default threshold F1 among the supervised models.
+It also provides the probability distribution over the two classes, not only a hard class prediction.
+The distilled BERT-tiny student is trained to preserve information from the teacher's softened output distribution.
+It uses the original dataset labels in the cross entropy part of the loss.
+The teacher should not be treated as ground truth.
+It is a stronger model used as a learning signal, and its errors or biases can still be transferred to the student.
 
-The prediction distribution also shows a limitation.
-On the final test subset, the original labels contain 210 non-toxic and 90 toxic examples.
-The teacher labels contain 167 non-toxic and 133 toxic examples.
-The distilled model predicts 140 non-toxic and 160 toxic examples.
-Therefore, the student successfully moves toward the teacher's stricter toxicity boundary.
-But it slightly overpredicts the toxic class compared with the teacher.
+\subsection{Distilled student results}
 
-I implemented soft label temperature distillation from the local BERT-base teacher into BERT-tiny on the natural stratified split.
+The first tries of distillation used hard teacher labels.
+This was a useful starting point because it made the pipeline simple.
+The student was trained as a normal classifier, but with teacher predictions as targets.
+However, hard labels don't use the information about teacher uncertainty.
+For example, a teacher prediction with probabilities 0.51 to 0.49 is treated the same as a prediction with probabilities 0.99 to 0.01.
+For this reason, the final experiment switched to softlabel temperature distillation using the BERT-base teacher logits.
+This allows the BERT-tiny student to learn from the teacher's full output distribution rather than only from the teacher's argmax prediction.
+
+\begin{table}[htbp]
+\caption{Soft label distilled BERT-tiny result on the natural test split.}\label{tab:distilled-results}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Model & Accuracy & Precision & Recall & F1 \\
+\midrule
+BERT-tiny distilled, $T=2$, $\alpha=0.7$ & 0.9117 & 0.4624 & 0.7257 & 0.5649 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The main final experiment uses softlabel temperature distillation from the local BERT-base teacher into BERT-tiny on the natural stratified split.
 In this experiment, the teacher is the finetuned BERT-base model.
 The student is \texttt{prajjwal1/bert-tiny}, the temperature is $T=2.0$, and $\alpha=0.7$.
 The loss is
@@ -383,17 +377,17 @@ The loss is
     +
     \alpha T^2\,\mathcal{L}_{KL}.
 \end{equation}
-At the default threshold of 0.50, the soft label distilled BERT-tiny model reaches test F1 0.565 on the natural split.
+At the default threshold of 0.50, the softlabel distilled BERT-tiny model reaches test F1 0.565 on the natural split.
 This improves over the supervised BERT-tiny baseline by 0.061 F1.
 It also recovers 52.65\% of the F1 difference between supervised BERT-tiny and BERT-base.
-If we compare the BERT-base teacher's hard predictions with soft labels, the distilled student got test F1 0.679 and agreement 0.928.
+Compared with the BERT-base teacher's hard predictions, the distilled student got test F1 0.679 and agreement 0.928.
 The main effect is that distillation reduces false positives compared with supervised BERT-tiny.
 And it preserves similar recall.
 
 \subsection{Error analysis candidates}
 
 To perform manual error analysis, I compared the original label, BERT-base teacher prediction, supervised BERT-tiny prediction, and distilled BERT tiny prediction on the natural test split.
-The aggregate counts show that soft label distillation mostly improves BERT-tiny by reducing false positives.
+The aggregate counts show that softlabel distillation mostly improves BERT-tiny by reducing false positives.
 It fixes 99 supervised BERT-tiny false positives and adds 22 new false positives.
 So the net reduction is 77 false positives.
 False negatives stay almost unchanged.
@@ -482,9 +476,7 @@ This suggests possible sensitivity to identity terms, and distillation does not 
 
 Efficiency was measured on CPU using the test split.
 The benchmark includes model size on disk, average inference time per example, and throughput in examples per second.
-Results are shown in Table~\ref{tab:benchmark}.
-
-For the natural split comparison, I also benchmarked all final models on CPU over the same 3,000 test examples with one repeat.
+For the natural split comparison, I benchmarked all final models on CPU over the same 3,000 test examples with one repeat.
 For Transformer models, the main comparison uses batch size 16 and maximum sequence length 256.
 The results are shown in Table~\ref{tab:september-cpu-benchmark}.
 
@@ -512,90 +504,39 @@ This shows how the distillation can be useful.
 It is a better compact model with much lower inference cost than the teacher.
 The exact speed numbers are hardware-dependent.
 
-\begin{table}[htbp]
-\caption{CPU efficiency benchmark for locally deployable models}\label{tab:benchmark}
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Model & Size (MB) & Time per example (ms) & Examples per sec \\
-\midrule
-TF-IDF and Logistic Regression & 0.89 & 0.061 & 16379.73 \\
-BERT-tiny supervised student & 17.42 & 1.606 & 622.61 \\
-BERT-tiny distilled student & 17.42 & 1.558 & 641.94 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The TF-IDF baseline is approximately 19.6 times smaller than the BERT-tiny models and more than 25 times faster on CPU.
-However, its original label F1 score is lower than the supervised BERT-tiny model.
-The supervised and distilled BERT-tiny models have almost identical size and speed.
-It's expected, because they share the same architecture.
-Their difference is the decision boundary learned during training.
-The supervised model follows the original labels, while the distilled model adapts to the teacher labels.
-
-\begin{table}[htbp]
-\caption{Practical comparison between the OpenAI teacher and the distilled student.}
-\label{tab:teacher-student-efficiency}
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Model & Deployment & Time per example & Examples per sec \\
-\midrule
-OpenAI LLM teacher & Remote API & 5440 ms & 0.18 \\
-BERT-tiny distilled student & Local CPU & 1.558 ms & 641.94 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The OpenAI teacher is not directly comparable to the local models in terms of model size.
-Because it is accessed through a proprietary remote API and its internal parameters and serving hardware are not observable.
-However, the practical labelling time can be estimated from the teacher labelling runs.
-Labelling 2100 examples took approximately 3.17 hours, corresponding to about 5.44 seconds per example, or 0.18 examples per second.
-In contrast, the distilled BERT-tiny student runs locally on CPU at 1.558 ms per example, or 641.94 examples per second.
-Therefore, the distilled student is approximately 3500 times faster in the measured deployment setting.
-
-This comparison illustrates the motivation for distillation.
-The OpenAI teacher is useful for producing high-level labels, confidence scores, and short explanations.
-But it is costly and slow to query repeatedly.
-The distilled student does not reproduce the full capabilities of the LLM, but it provides a compact local approximation of the teacher's behaviour on the selected toxicity classification task.
-
 \section{Concluding Remarks}\label{sec:conclusion}
 
 In this project a complete apprentice model pipeline was implemented and evaluated for toxic comment classification.
-The results show that a compact BERT-tiny student can be adapted to imitate an LLM teacher on a narrow NLP task.
+The results show that a compact BERT-tiny student can be adapted to imitate a stronger BERT-base teacher on a narrow NLP task.
 On the natural distribution original-label experiment, the classical TF-IDF and Logistic Regression baseline reached an F1 score of 0.406 on the test split at the default threshold.
+The supervised BERT-tiny baseline reached an F1 score of 0.504.
 The finetuned BERT-base supervised teacher reached an F1 score of 0.62 on the same test split.
 This confirms that contextual Transformer representations provide a high improvement over the classical sparse vector baseline for this imbalanced toxicity task.
-The final distilled model achieved an F1 score of 0.696 against teacher labels, demonstrating partial transfer of the teacher's decision behaviour.
-At the same time, the distilled model did not improve performance against the original dataset labels compared with the supervised BERT-tiny baseline.
-Because the teacher applies a different and stricter interpretation of toxicity, optimizing for teacher imitation naturally changes the evaluation behaviour.
+The final soft label distilled BERT-tiny model reached F1 0.565 against original labels at the default threshold.
+This improves over supervised BERT-tiny by 0.061 F1 and recovers 52.65\% of the gap between supervised BERT-tiny and the BERT-base teacher.
+Against BERT-base teacher hard predictions, the distilled model reached F1 0.679 and agreement 0.928, showing partial transfer of the teacher's decision behaviour.
 
 The experiments also highlight important tradeoffs.
 The TF-IDF baseline is extremely efficient and interpretable, but weaker in F1 score.
 BERT-tiny and BERT-base provide better classification quality, but are significantly larger and slower.
-The OpenAI teacher, on the other hand, is powerful and can provide labels, confidence scores, and short explanations.
-But it is accessed through a remote API and is expensive and slow to query repeatedly.
-In the measured labelling pipeline, the OpenAI teacher required approximately 5.44 seconds per example, while the distilled BERT-tiny student performed local CPU inference in 1.558 ms per example.
-This illustrates the practical motivation for distillation: expensive teacher decisions can be used offline to train a compact local model that is much faster at deployment time.
+BERT-base gives the best F1, but the CPU benchmark shows that it is much larger and slower than BERT-tiny.
+At batch size 16, distilled BERT-tiny is about 24 times smaller and about 53 times faster than BERT-base.
+It is improving over the supervised BERT-tiny baseline.
 Distillation does not change model size or speed because the architecture remains the same, but it changes the decision boundary of the student.
 This supports the idea that knowledge distillation can be used not only for compression, but also for task specific behavioural adaptation.
 
 There are several limitations.
-First, the project uses hard label distillation, not a classical soft label distillation with temperature and KL-divergence.
-This loses information contained in the teacher's probability distribution.
-Second, the OpenAI teacher is not an objective ground truth and may be sensitive to prompt wording.
-Third, the final teacher labeled dataset is smaller than the original supervised training set because API labeling has cost and time constraints.
-Finally, the validation threshold tuning experiments did not improve test F1 for either TF-IDF or BERT-base.
+First, the BERT-base teacher is not an objective ground truth and may transfer errors or biases to the student.
+Second, the minimal pair check suggests that all models can still be sensitive to identity terms.
+Third, only one soft label distillation setting, $T=2.0$ and $\alpha=0.7$, is used as the accepted final run.
+Finally, validation threshold tuning does not always improve test F1.
 This means that threshold calibration should be interpreted carefully.
-The distilled student also slightly overpredicts the toxic class compared with the teacher.
-It shows that soft label training could improve calibration.
 
 Future work could extend the project in several directions.
-The most direct extension is soft label distillation using teacher probabilities and a KL-divergence loss.
-Another extension is to distil the BERT-base teacher logits exported from the natural-distribution experiment into BERT-tiny.
+The most direct extension is to compare more temperatures, alpha values, and calibration methods for the BERT-base to BERT-tiny distillation setup.
 Additional work could compare multiple teachers, such as an OpenAI LLM and an open-source toxicity classifier.
 Or include explanation based distillation.
-Finally, a larger teacher labelled dataset would allow a more reliable evaluation of generalization and teacher imitation.
+Finally, a larger and more systematic bias evaluation would make the qualitative minimal-pair findings more reliable.
 The CPU efficiency benchmark and model size comparison for the BERT-base to BERT-tiny soft label distillation experiment should mainly be interpreted as a relative comparison between models under the same setup.
 
 \begin{thebibliography}{9}
